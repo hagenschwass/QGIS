@@ -1,26 +1,51 @@
 #include "MainWorker.h"
 
-MainWorker::MainWorker()
+#include "Ring.h"
+
+MainWorker::MainWorker() :
+	nworkers(QThread::idealThreadCount()),
+	workers(new CoWorker*[nworkers])
 {
+	for (int i = 0; i < nworkers; i++)
+	{
+		workers[i] = new CoWorker(&workersemaphore);
+	}
 	moveToThread(&thread);
-	connect(this, SIGNAL(scan(QVector<QgsPolygonXY> *, volatile bool *, QSemaphore *)), this, SLOT(scanslot(QVector<QgsPolygonXY> *, volatile bool *, QSemaphore *)));
+	connect(this, SIGNAL(scan(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)), this, SLOT(scanslot(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)));
 	thread.start();
 }
 
 MainWorker::~MainWorker()
 {
+	for (int i = 0; i < nworkers; i++)
+	{
+		delete workers[i];
+	}
 	thread.exit();
 	thread.wait();
 }
 
-void MainWorker::scanslot(QVector<QgsPolygonXY> *polygons, volatile bool *aborted, QSemaphore *finishedsemphore)
+void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *aborted, QSemaphore *finishedsemphore)
 {
-	for (QgsPolygonXY &polygon : *polygons)
+	for (MultiPolygon &multipolygon : *polygons)
 	{
-		for (QgsPolylineXY &ring : polygon)
+		for (Polygon *polygon = multipolygon.polygons; polygon != multipolygon.polygons + multipolygon.n; polygon++)
 		{
-
-			Matching *matching = new Matching();
+			for (SRing *ring = polygon->rings; ring != polygon->rings + polygon->n; ring++)
+			{
+				SRing2 ring2 = createSRing2(*ring);
+				if (ring2.area > 0.0)
+				{
+					SRing2 inv2 = invertedSRing2(ring2);
+					Lookup lookup = computeInvMatching(ring2, inv2, nworkers, workers, &workersemaphore, *aborted);
+					deleteMatching(ring2, inv2, lookup);
+					deleteSRing2( inv2);
+				}
+				if (*aborted)
+				{
+					break;
+				}
+			}
 			if (*aborted)
 			{
 				break;
@@ -31,6 +56,17 @@ void MainWorker::scanslot(QVector<QgsPolygonXY> *polygons, volatile bool *aborte
 			break;
 		}
 	}
+
 	finishedsemphore->release();
+
+	deleteMultiPolygonVector(polygons);
+}
+
+inline void deleteMultiPolygonVector(std::vector<MultiPolygon> *polygons)
+{
+	for (MultiPolygon &multipolygon : *polygons)
+	{
+		deleteMultiPolygon(multipolygon);
+	}
 	delete polygons;
 }

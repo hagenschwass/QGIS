@@ -77,3 +77,8 @@ python/plugins/processing/tests/testdata/custom/*.aux.xml
 python/plugins/processing/tests/testdata/*.aux.xml
 Thumb.db
 Testing/*
+/src/plugins/hagenpolygonmatcher/moc_CoWorkder.cpp
+/src/plugins/hagenpolygonmatcher/moc_HPolygonMatcher.cpp
+/src/plugins/hagenpolygonmatcher/moc_Intermediate.cpp
+/src/plugins/hagenpolygonmatcher/moc_MainWorkder.cpp
+/tests/testdata/test_plugin_path/plugin_started.txt

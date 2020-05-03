@@ -13,6 +13,8 @@
 #include <QMenu>
 #include <QAction>
 
+#include <vector>
+
 static QString sName=QObject::tr("Polygon Matcher");
 static QString sDescr= QObject::tr("Flexible polygon matching for applications like symmetry detection");
 static QString sCat= QObject::tr("Vector");
@@ -102,14 +104,14 @@ void HPolygonMatcher::currentLayerChanged(QgsMapLayer *layer)
 void HPolygonMatcher::scan()
 {
 	QgsFeatureIterator it = mLayer->getFeatures();
-	QVector<QgsPolygonXY> *polygons = new QVector<QgsPolygonXY>();
+	std::vector<MultiPolygon> *polygons = new std::vector<MultiPolygon>();
 	if (it.isValid())
 	{
 		for (QgsFeature feature; it.nextFeature(feature);)
 		{
 			if (feature.isValid() && feature.hasGeometry())
 			{
-				polygons->push_back(feature.geometry().asPolygon());
+				polygons->push_back(createMultiPolygon(feature.geometry().asMultiPolygon()));
 			}
 		}
 	}

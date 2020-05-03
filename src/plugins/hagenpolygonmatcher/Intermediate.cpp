@@ -4,7 +4,7 @@ Intermediate::Intermediate()
 {
 	moveToThread(&thread);
 	connect(this, SIGNAL(abort()), this, SLOT(abortslot()));
-	connect(this, SIGNAL(scan(QVector<QgsPolygonXY> *)), this, SLOT(scanslot(QVector<QgsPolygonXY> *)));
+	connect(this, SIGNAL(scan(std::vector<MultiPolygon> *)), this, SLOT(scanslot(std::vector<MultiPolygon> *)));
 	thread.start();
 	semaphore.release();
 }
@@ -22,7 +22,7 @@ void Intermediate::abortslot()
 	semaphore.acquire();
 }
 
-void Intermediate::scanslot(QVector<QgsPolygonXY> *polygons)
+void Intermediate::scanslot(std::vector<MultiPolygon> *polygons)
 {
 	aborted = false;
 	worker.scan(polygons, &aborted, &semaphore);

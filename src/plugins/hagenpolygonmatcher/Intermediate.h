@@ -10,6 +10,8 @@
 
 #include "qgsgeometry.h"
 
+#include <vector>
+
 class Intermediate : public QObject
 {
 	Q_OBJECT
@@ -18,10 +20,10 @@ public:
 	~Intermediate() override;
 signals:
 	void abort();
-	void scan(QVector<QgsPolygonXY> *polygons);
+	void scan(std::vector<MultiPolygon> *polygons);
 private slots:
 	void abortslot();
-	void scanslot(QVector<QgsPolygonXY> *polygons);
+	void scanslot(std::vector<MultiPolygon> *polygons);
 private:
 	QThread thread;
 	volatile bool aborted;
