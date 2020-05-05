@@ -6,6 +6,10 @@ Polygon Matcher is a C++ plugin for QGIS (or QGIS is an awesome playground for c
 
 Polygon Matcher was intended to be used for symmetry detection in building footprints extracted from LIDAR data. The current approach is about to scan building footprint datasets for simple line symmetry within exterior rings themselve. Further targets are symmetry line adjustment and extracting all plane symmetry from the match. Searching for similiar building footprints within datasets or symmetry lines between different footprints are also options.
 
+## Symmetry Line Adjustment
+
+While I have been experiencing symmetry line adjustment with respect to a symmetry line (point and vector) was worst because the shape was turned around the point, and symmetry line adjustment with respect to a vector (symmetry line without point, not fixed, perimeter maximizing) was not accurate (for my mighty), Polygon Matcher offers more independent options for symmetry line adjustment.
+
 # Symmetry-preserving Generalization of Building Footprints in Kartography
 
-If you have symmetrical building footprints and want to orthogonalize them with respect to the symmetry line, you can use "Sympector" (http://hagenschwass.name/Sympector). That tool can also simplify with respect to the symmetry lines. Note that it uses a weaker variation of symmetry detection algorithm than Polygon Matcher.
+If you have symmetrical building footprints and want to orthogonalize them with respect to the symmetry line, you can use "Sympector" (http://hagenschwass.name/Sympector). That tool can also simplify with respect to the symmetry lines. Note that it uses a weaker variation of symmetry detection algorithm than Polygon Matcher and it uses symmetry line adjustment with respect to a vector.
