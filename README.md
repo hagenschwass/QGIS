@@ -8,4 +8,4 @@ Polygon Matcher was intended to be used for symmetry detection in building footp
 
 # Symmetry-preserving Generalization of Building Footprints in Kartography
 
-If you have symmetrical building footprints and want to orthogonalize them with respect to the symmetry line, you can use "Sympector" (http://hagenschwass.name/Sympector). That tool can also simplify with respect to the symmetry lines.
+If you have symmetrical building footprints and want to orthogonalize them with respect to the symmetry line, you can use "Sympector" (http://hagenschwass.name/Sympector). That tool can also simplify with respect to the symmetry lines. Note that is uses a weaker variation of symmetry detection algorithm than Polygon Matcher.
