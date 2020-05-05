@@ -1,6 +1,6 @@
 # About Polygon Matcher
 
-Polygon Matcher is a C++ plugin for QGIS. It's core is an algorithm matching two polygon rings with respect to an area based quality comparison. The algorithm is shortcutting and running in O(n^3 * m^3) time while consuming O(n^2 * m^2) memory.
+Polygon Matcher is a C++ plugin for QGIS (or QGIS is an awesome playground for code monkeys). It's core is an algorithm matching two polygon rings with respect to an area based quality comparison. The algorithm is shortcutting and running in O(n^3 * m^3) time while consuming O(n^2 * m^2) memory.
 
 # Applications of Polygon Matcher
 
