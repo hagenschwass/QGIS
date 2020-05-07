@@ -2,13 +2,13 @@
 
 #include "Ring.h"
 
-MainWorker::MainWorker() :
+MainWorker::MainWorker(volatile bool *aborted) :
 	nworkers(QThread::idealThreadCount()),
 	workers(new CoWorker*[nworkers])
 {
 	for (int i = 0; i < nworkers; i++)
 	{
-		workers[i] = new CoWorker(&workersemaphore);
+		workers[i] = new CoWorker(&workersemaphore, aborted);
 	}
 	moveToThread(&thread);
 	connect(this, SIGNAL(scan(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)), this, SLOT(scanslot(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)));
@@ -37,7 +37,7 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 				if (ring2.area > 0.0)
 				{
 					SRing2 inv2 = invertedSRing2(ring2);
-					Lookup lookup = computeInvMatching(ring2, inv2, nworkers, workers, &workersemaphore, *aborted);
+					LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, nworkers, workers, &workersemaphore, *aborted);
 					deleteMatching(ring2, inv2, lookup);
 					deleteSRing2( inv2);
 				}

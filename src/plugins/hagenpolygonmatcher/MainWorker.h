@@ -18,7 +18,7 @@ class MainWorker : public QObject
 {
 	Q_OBJECT
 public:
-	MainWorker();
+	MainWorker(volatile bool *aborted);
 	~MainWorker() override;
 signals:
 	void scan(std::vector<MultiPolygon> *polygons, volatile bool *aborted, QSemaphore *finishedsemphore);

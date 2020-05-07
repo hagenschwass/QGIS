@@ -1,6 +1,7 @@
 #include "Intermediate.h"
 
-Intermediate::Intermediate()
+Intermediate::Intermediate() :
+	worker(&aborted)
 {
 	moveToThread(&thread);
 	connect(this, SIGNAL(abort()), this, SLOT(abortslot()));

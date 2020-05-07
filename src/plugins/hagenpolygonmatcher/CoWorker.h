@@ -11,17 +11,16 @@ class CoWorker : public QObject
 {
 	Q_OBJECT
 public:
-	CoWorker(QSemaphore *semaphore);
+	CoWorker(QSemaphore *semaphore, volatile bool *aborted);
 	~CoWorker() override;
 signals:
-	void initbaseperimeter(int basei, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
-	void initmatchperimeter(int matchi, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
-	void matchinv(int basei, int basecut, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
+	void initlookupinv(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+	void matchinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private slots:
-void initbaseperimeterslot(int basei, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
-void initmatchperimeterslot(int matchi, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
-void matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted);
+void initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+void matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private:
 	QThread thread;
 	QSemaphore *semaphore;
+	volatile bool *aborted;
 };

@@ -5,29 +5,13 @@
 #include <cfloat>
 
 /*O(n^6)*/
-inline Lookup computeInvMatching(SRing2 &base, SRing2 &match, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
+inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
 {
-	Lookup lookup = new Matching***[base.ring.n];
+	LookupT lookup = new LookupArg[base.ring.n];
 	for (int i = 0; i < base.ring.n; i++)
 	{
-		Matching ***&base1 = lookup[i];
-		base1 = new Matching **[base.ring.n];
-		for (int j = 0; j < base.ring.n; j++)
-		{
-			Matching **&base2 = base1[j];
-			base2 = new Matching*[match.ring.n];
-			for (int k = 0; k < match.ring.n; k++)
-			{
-				Matching *&match1 = base2[k];
-				match1 = new Matching[match.ring.n];
-				for (int l = 0; l < match.ring.n; l++)
-				{
-					match1[l].quality = -DBL_MAX;
-					match1[l].leftback = nullptr;
-					match1[l].rightback = nullptr;
-				}
-			}
-		}
+		LookupArg &base1 = lookup[i];
+		base1 = nullptr;
 	}
 	if (aborted)
 	{
@@ -38,30 +22,10 @@ inline Lookup computeInvMatching(SRing2 &base, SRing2 &match, int nworkers, CoWo
 
 	for (int basei = 0; basei < base.ring.n; basei++)
 	{
-		workers[currentworker]->initbaseperimeter(basei, &base, &match, &lookup, &aborted);
+		workers[currentworker]->initlookupinv(basei, &base, &match, lookup, skiparea);
 		currentworker = (currentworker + 1) % nworkers;
 	}
 	semaphore->acquire(base.ring.n);
-	if (aborted)
-	{
-		return lookup;
-	}
-	for (int matchi = 0; matchi < match.ring.n; matchi++)
-	{
-		workers[currentworker]->initmatchperimeter(matchi, &base, &match, &lookup, &aborted);
-		currentworker = (currentworker + 1) % nworkers;
-	}
-	if (aborted == false)
-	{
-		for (int basei = 0; basei < base.ring.n; basei++)
-		{
-			for (int matchi = 0; matchi < match.ring.n; matchi++)
-			{
-				lookup[basei][(basei + 1) % base.ring.n][matchi][(matchi + 1) % match.ring.n].quality = 0.0;
-			}
-		}
-	}
-	semaphore->acquire(match.ring.n);
 
 	if (aborted)
 	{
@@ -75,7 +39,7 @@ inline Lookup computeInvMatching(SRing2 &base, SRing2 &match, int nworkers, CoWo
 		for (int basei = 0; basei < base.ring.n; basei++)
 		{
 
-			workers[currentworker]->matchinv(/**/basei, basecut, &base, &match, &lookup, &aborted);
+			workers[currentworker]->matchinv(/**/basei, basecut, &base, &match, lookup);
 			currentworker = (currentworker + 1) % nworkers;
 
 
@@ -102,22 +66,28 @@ inline Lookup computeInvMatching(SRing2 &base, SRing2 &match, int nworkers, CoWo
 	return lookup;
 }
 
-inline void deleteMatching(SRing2 &base, SRing2 &match, Lookup lookup)
+inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 {
 	for (int i = 0; i < base.ring.n; i++)
 	{
-		Matching ***base1 = lookup[i];
-		for (int j = 0; j < base.ring.n; j++)
+		LookupArg base1 = lookup[i];
+		if (base1 != nullptr)
 		{
-			Matching **base2 = base1[j];
-			for (int k = 0; k < match.ring.n; k++)
+			for (int j = 0; j < base.ring.n; j++)
 			{
-				Matching *match1 = base2[k];
-				delete[] match1;
+				Lookup *base2 = base1[j];
+				if (base2 != nullptr)
+				{
+					for (int k = 0; k < match.ring.n; k++)
+					{
+						Lookup &match1 = base2[k];
+						delete[] match1.matching;
+					}
+					delete[] base2;
+				}
 			}
-			delete[] base2;
+			delete[] base1;
 		}
-		delete[] base1;
 	}
 	delete[] lookup;
 }

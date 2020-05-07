@@ -1,13 +1,13 @@
 #include "CoWorker.h"
 #include <cmath>
 
-CoWorker::CoWorker(QSemaphore *semaphore) :
-	semaphore(semaphore)
+CoWorker::CoWorker(QSemaphore *semaphore, volatile bool *aborted) :
+	semaphore(semaphore),
+	aborted(aborted)
 {
 	moveToThread(&thread);
-	connect(this, SIGNAL(initbaseperimeter(int, SRing2 *, SRing2 *, Lookup *, volatile bool *)), this, SLOT(initbaseperimeterslot(int, SRing2 *, SRing2 *, Lookup *, volatile bool *)));
-	connect(this, SIGNAL(initmatchperimeter(int, SRing2 *, SRing2 *, Lookup *, volatile bool *)), this, SLOT(initmatchperimeterslot(int, SRing2 *, SRing2 *, Lookup *, volatile bool *)));
-	connect(this, SIGNAL(matchinv(/**/int , int , SRing2 *, SRing2 *, Lookup *, volatile bool *)), this, SLOT(matchinvslot(/**/int , int , SRing2 *, SRing2 *, Lookup *, volatile bool *)));
+	connect(this, SIGNAL(initlookupinv(int, SRing2 *, SRing2 *, LookupArg *, double)), this, SLOT(initlookupinvslot(int, SRing2 *, SRing2 *, LookupArg *, double)));
+	connect(this, SIGNAL(matchinv(/**/int , int , SRing2 *, SRing2 *, LookupArg *)), this, SLOT(matchinvslot(/**/int , int , SRing2 *, SRing2 *, LookupArg *)));
 	thread.start();
 }
 
@@ -17,52 +17,187 @@ CoWorker::~CoWorker()
 	thread.wait();
 }
 
-void CoWorker::initbaseperimeterslot(int basei, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted)
+void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea)
 {
-	Matching **basematching = (*lookup)[basei][(basei + 1) % base->ring.n];
-	for (int matchi = 0; matchi < match->ring.n; matchi++)
+	if (*aborted == false)
 	{
-		double absarea = 0.0;
-		Point &p1 = match->ring.ring[0];
-		for (int matchj = matchi + 1, matchk = matchi + 2; matchk < matchi + match->ring.n; matchj = matchk, matchk++)
+		Matching *tempmatching = new Matching[match->ring.n];
+		for (int i = 0; i < match->ring.n; i++)
 		{
-			Point &p2 = match->ring.ring[matchj % match->ring.n], &p3 = match->ring.ring[matchk % match->ring.n];
-			double &p1x = p1.x, &p1y = p1.y, &p2x = p2.x, &p2y = p2.y, &p3x = p3.x, &p3y = p3.y;
-			double p1yp2y = p1y - p2y, p1xp3x = p1x - p3x, p1yp3y = p1y - p3y, p2xp1x = p2x - p1x;
-			absarea -= abs(.5 * (p1yp2y * p1xp3x + p1yp3y * p2xp1x));
-			basematching[matchi][matchk % match->ring.n].quality = 2.0 * absarea;
+			tempmatching[i].base1 = basei;
+			tempmatching[i].leftback = nullptr;
+			tempmatching[i].rightback = nullptr;
 		}
-		if (*aborted)
+
+		LookupArg &lookupbase = lookup[basei];
+		lookupbase = new Lookup*[base->ring.n];
+		lookupbase[basei] = nullptr;
+
 		{
-			break;
+			Lookup *&lookupmatch = lookupbase[(basei + 1) % base->ring.n];
+			lookupmatch = new Lookup[match->ring.n];
+
+			for (int matchi = 0; matchi < match->ring.n; matchi++)
+			{
+				tempmatching[0].quality = 0.0;
+				tempmatching[0].match1 = matchi;
+				tempmatching[0].match2 = matchi + 1;
+				tempmatching[0].base2 = basei + 1;
+				Lookup &lookupend = lookupmatch[matchi];
+				lookupend.begin = matchi + 1;
+
+
+				double matcharea = 0.0;
+				double matchareaabs = 0.0;
+				Point &matchp1 = match->ring.ring[matchi];
+				for (int matchj = matchi + 1, matchk = matchi + 2; ; matchj = matchk, matchk++)
+				{
+					Point &matchp2 = match->ring.ring[matchj % match->ring.n], &matchp3 = match->ring.ring[matchk % match->ring.n];
+					double &matchp1x = matchp1.x, &matchp1y = matchp1.y, &matchp2x = matchp2.x, &matchp2y = matchp2.y, &matchp3x = matchp3.x, &matchp3y = matchp3.y;
+					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
+					double matchareal = -.5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+					matcharea += matchareal;
+					if (matcharea > skiparea)
+					{
+						lookupend.matching = new Matching[matchk - matchi - 1];
+						memcpy_s(lookupend.matching, sizeof(Matching) * (matchk - matchi - 1), tempmatching, sizeof(Matching) * (matchk - matchi - 1));
+						lookupend.end = matchk - 1;
+						break;
+					}
+					matchareaabs += 2.0 * abs(matchareal);
+					tempmatching[matchk - matchi - 1].quality = -matchareaabs;
+					tempmatching[matchk - matchi - 1].match1 = matchi;
+					tempmatching[matchk - matchi - 1].match2 = matchk;
+					tempmatching[matchk - matchi - 1].base2 = basei + 1;
+					if (matchk == matchi + match->ring.n - 1)
+					{
+						lookupend.matching = new Matching[matchk - matchi];
+						memcpy_s(lookupend.matching, sizeof(Matching) * (matchk - matchi), tempmatching, sizeof(Matching) * (matchk - matchi));
+						lookupend.end = matchk;
+						break;
+					}
+				}
+
+
+
+
+				if (*aborted)
+				{
+					for (matchi++; matchi < match->ring.n; matchi++)
+					{
+						lookupmatch[matchi].matching = nullptr;
+					}
+					break;
+				}
+			}
+
 		}
+
+
+		if (*aborted == false)
+		{
+
+			double basearea = 0.0;
+			double baseareaabs = 0.0;
+			Point &basep1 = base->ring.ring[basei];
+			for (int basej = basei + 1, basek = basei + 2; basek < basei + base->ring.n; basej = basek++)
+			{
+				Point &basep2 = base->ring.ring[basej % base->ring.n], &basep3 = base->ring.ring[basek % base->ring.n];
+				double &basep1x = basep1.x, &basep1y = basep1.y, &basep2x = basep2.x, &basep2y = basep2.y, &basep3x = basep3.x, &basep3y = basep3.y;
+				double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
+				double baseareal = .5 * (basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x);
+				basearea += baseareal;
+				baseareaabs += 2.0 * abs(baseareal);
+
+
+				Lookup *&lookupmatch = lookupbase[basek % base->ring.n];
+				lookupmatch = new Lookup[match->ring.n];
+
+				for (int matchi = 0; matchi < match->ring.n; matchi++)
+				{
+					tempmatching[0].quality = -baseareaabs;
+					tempmatching[0].match1 = matchi;
+					tempmatching[0].match2 = matchi + 1;
+					tempmatching[0].base2 = basek;
+					int begin = basearea > skiparea ? -1 : matchi + 1;
+					double matcharea = 0.0;
+					double matchareaabs = 0.0;
+					Point &matchp1 = match->ring.ring[matchi];
+					for (int matchj = matchi + 1, matchk = matchi + 2; ; matchj = matchk, matchk++)
+					{
+						Point &matchp2 = match->ring.ring[matchj % match->ring.n], &matchp3 = match->ring.ring[matchk % match->ring.n];
+						double &matchp1x = matchp1.x, &matchp1y = matchp1.y, &matchp2x = matchp2.x, &matchp2y = matchp2.y, &matchp3x = matchp3.x, &matchp3y = matchp3.y;
+						double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
+						double matchareal = -.5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+						matcharea += matchareal;
+						if (basearea - matcharea < skiparea && begin < 0)
+						{
+							begin = matchk;
+						}
+						if (matcharea - basearea > skiparea && begin > -1)
+						{
+							Lookup &lookupend = lookupmatch[matchi];
+							lookupend.begin = begin;
+
+
+							lookupend.matching = new Matching[matchk - begin];
+							memcpy_s(lookupend.matching, sizeof(Matching) * (matchk - begin), &tempmatching[begin - matchi - 1], sizeof(Matching) * (matchk - begin));
+							lookupend.end = matchk - 1;
+							break;
+						}
+						matchareaabs += 2.0 * abs(matchareal);
+						tempmatching[matchk - matchi - 1].quality = -matchareaabs - baseareaabs;
+						tempmatching[matchk - matchi - 1].match1 = matchi;
+						tempmatching[matchk - matchi - 1].match2 = matchk;
+						tempmatching[matchk - matchi - 1].base2 = basek;
+						if (matchk == matchi + match->ring.n - 1)
+						{
+							Lookup &lookupend = lookupmatch[matchi];
+							lookupend.begin = begin;
+
+
+							lookupend.matching = new Matching[matchk - begin + 1];
+							memcpy_s(lookupend.matching, sizeof(Matching) * (matchk - begin + 1), &tempmatching[begin - matchi - 1], sizeof(Matching) * (matchk - begin + 1));
+							lookupend.end = matchk;
+							break;
+						}
+					}
+
+
+
+					if (*aborted)
+					{
+						for (matchi++; matchi < match->ring.n; matchi++)
+						{
+							lookupmatch[matchi].matching = nullptr;
+						}
+						break;
+					}
+
+				}
+
+
+
+				if (*aborted)
+				{
+					for (basek++; basek < basei + base->ring.n; basek++)
+					{
+						lookupbase[basek % base->ring.n] = nullptr;
+					}
+				}
+			}//basek
+
+		}
+
+
+		delete[] tempmatching;
 	}
+
+
 	semaphore->release();
 }
 
-void CoWorker::initmatchperimeterslot(int matchi, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted)
-{
-	for (int basei = 0; basei < base->ring.n; basei++)
-	{
-		double absarea = 0.0;
-		Point &p1 = base->ring.ring[0];
-		for (int basej = basei + 1, basek = basei + 2; basek < basei + base->ring.n; basej = basek, basek++)
-		{
-			Point &p2 = base->ring.ring[basej % base->ring.n], &p3 = base->ring.ring[basek % base->ring.n];
-			double &p1x = p1.x, &p1y = p1.y, &p2x = p2.x, &p2y = p2.y, &p3x = p3.x, &p3y = p3.y;
-			double p1yp2y = p1y - p2y, p1xp3x = p1x - p3x, p1yp3y = p1y - p3y, p2xp1x = p2x - p1x;
-			absarea -= abs(.5 * (p1yp2y * p1xp3x + p1yp3y * p2xp1x));
-			(*lookup)[basei][basek % base->ring.n][matchi][(matchi + 1) % match->ring.n].quality = 2.0 * absarea;
-		}
-		if (*aborted)
-		{
-			break;
-		}
-	}
-	semaphore->release();
-}
-
-void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, Lookup *lookup, volatile bool *aborted)
+void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup)
 {
 
 	Point &pbasei = base->ring.ring[basei], &pbasej = base->ring.ring[(basei + basecut) % base->ring.n];
@@ -87,6 +222,10 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 			{
 				for (int matchi = 0; matchi < match->ring.n; matchi++)
 				{
+					Lookup &lookupl = lookup[basei][(basei + basecut) % base->ring.n][matchi];
+					if (lookupl.begin > matchi + matchcut || lookupl.end < matchi + matchcut) continue;
+					Lookup &lookupleft = lookup[basei][basepeek % base->ring.n][matchi];
+
 					Point &pmatchi = match->ring.ring[matchi], &pmatchj = match->ring.ring[(matchi + matchcut) % match->ring.n];
 					double matchdx = pmatchj.x - pmatchi.x, matchdy = pmatchj.y - pmatchi.y;
 					double matchlength = sqrt(matchdx * matchdx + matchdy * matchdy);
@@ -94,10 +233,18 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 					{
 						double matchdxn = matchdx / matchlength, matchdyn = matchdy / matchlength;
 
-						Matching &gate = (*lookup)[basei][(basei + basecut) % base->ring.n][matchi][(matchi + matchcut) % match->ring.n];
+						Matching &gate = lookupl.matching[matchi + matchcut - lookupl.begin];
 
-						for (int matchpeek = matchi + 1; matchpeek < matchi + matchcut; matchpeek++)
+						int matchpeekend = std::min(lookupleft.end, matchi + matchcut - 1);
+						for (int matchpeek = lookupleft.begin; matchpeek <= matchpeekend; matchpeek++)
 						{
+							Lookup &lookupright = lookup[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchpeek % match->ring.n];
+							int matchindexright = matchpeek >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
+							if (matchindexright < lookupright.begin || matchindexright > lookupright.end) continue;
+							Matching &right = lookupright.matching[matchindexright - lookupright.begin];
+
+							Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
+
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
 							double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
 							double matchleft = (matchp21xp11xleft * matchdxn - matchp11yp21yleft * matchdyn);
@@ -116,8 +263,6 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 								quality = std::min(absbaseh, absmatchh) * (std::min(baseleft, matchleft) - std::max(baseright, matchright));
 							}
 
-							Matching &left = (*lookup)[basei][basepeek % base->ring.n][matchi][matchpeek % match->ring.n];
-							Matching &right = (*lookup)[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchpeek % match->ring.n][(matchi + matchcut) % match->ring.n];
 
 							double dynq = quality + left.quality + right.quality;
 							if (dynq > gate.quality)
