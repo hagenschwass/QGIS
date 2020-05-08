@@ -14,6 +14,11 @@ typedef Point* Ring;
 inline void computeArea(Ring ring, int n, double &area);
 inline void comupteCenterAndArea(Ring ring, Point &center, double &area);
 
+struct Line
+{
+	Point p1, p2;
+};
+
 struct SRing
 {
 	Ring ring;

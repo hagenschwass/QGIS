@@ -21,6 +21,7 @@ public:
 	void unload() override;
 
 private slots:
+
 	void currentLayerChanged(QgsMapLayer *layer);
 	void scan();
 
@@ -32,6 +33,10 @@ private:
 	QgsVectorLayer *mLayer;
 
 	Intermediate *intermediate;
+
+private slots:
+	
+	void lines(std::vector<Line> *lines);
 
 };
 

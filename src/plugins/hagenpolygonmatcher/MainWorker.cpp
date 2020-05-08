@@ -3,6 +3,7 @@
 #include "Ring.h"
 
 MainWorker::MainWorker(volatile bool *aborted) :
+	specialworker(&specialsemaphore, aborted),
 	nworkers(QThread::idealThreadCount()),
 	workers(new CoWorker*[nworkers])
 {
@@ -33,17 +34,26 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 		{
 			for (SRing *ring = polygon->rings; ring != polygon->rings + polygon->n; ring++)
 			{
-				SRing2 ring2 = createSRing2(*ring);
-				if (ring2.area > 0.0)
+				if (ring->n > 2)
 				{
-					SRing2 inv2 = invertedSRing2(ring2);
-					LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, nworkers, workers, &workersemaphore, *aborted);
-					deleteMatching(ring2, inv2, lookup);
-					deleteSRing2( inv2);
-				}
-				if (*aborted)
-				{
-					break;
+					SRing2 ring2 = createSRing2(*ring);
+					if (ring2.area > 1e-7)
+					{
+						SRing2 inv2 = invertedSRing2(ring2);
+						double quality = 0.0;
+						Matching *matching = nullptr;
+						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, quality, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
+						InvertableSymmetry sym(ring2, inv2, matching, lookup);
+						std::vector<Line> *lines = new std::vector<Line>();
+						sym.fillmatchlines(lines);
+						emit this->lines(lines);
+						deleteMatching(ring2, inv2, lookup);
+						deleteSRing2( inv2);
+					}
+					if (*aborted)
+					{
+						break;
+					}
 				}
 			}
 			if (*aborted)

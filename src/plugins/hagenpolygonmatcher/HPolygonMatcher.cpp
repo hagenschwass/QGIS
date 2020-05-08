@@ -45,6 +45,7 @@ HPolygonMatcher::~HPolygonMatcher()
 void HPolygonMatcher::initGui()
 {
 	intermediate = new Intermediate();
+	connect(&intermediate->worker, SIGNAL(lines(std::vector<Line> *)), this, SLOT(lines(std::vector<Line> *)));
 
 	mSep=interface->layerMenu()->addSeparator();
 	mScanaction = interface->layerMenu()->addAction("Scan for symmetry");
@@ -117,6 +118,35 @@ void HPolygonMatcher::scan()
 	}
 	intermediate->abort();
 	intermediate->scan(polygons);
+}
+
+
+void HPolygonMatcher::lines(std::vector<Line> *lines)
+{
+	QgsFeature feature;
+	QgsAttributes attrs;
+	for (auto &att : mLayer->attributeList())
+	{
+		attrs.append(mLayer->attributeDisplayName(att));
+	}
+	feature.setAttributes(attrs);
+	
+	QgsPolylineXY ring;
+	for (Line &line : *lines)
+	{
+		ring.push_back(QgsPointXY(line.p1.x, line.p1.y));
+		//ring.push_front(QgsPointXY(line.p2.x, line.p2.y));
+	}
+	ring.push_back(ring.front());
+	QgsPolygonXY poly;
+	poly.push_back(ring);
+	QgsMultiPolygonXY multipoly;
+	multipoly.push_back(poly);
+	feature.setGeometry(QgsGeometry::fromMultiPolygonXY(multipoly));
+	mLayer->startEditing();
+	mLayer->addFeature(feature, QgsFeatureSink::Flag::FastInsert);
+	mLayer->commitChanges();
+	delete lines;
 }
 
 //////////////////////////////////////////////////////////////////////////

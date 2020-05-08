@@ -29,4 +29,5 @@ private:
 	volatile bool aborted;
 	QSemaphore semaphore;
 	MainWorker worker;
+	friend class HPolygonMatcher;
 };

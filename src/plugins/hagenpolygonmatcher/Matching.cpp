@@ -1,11 +1,12 @@
 #include "matching.h"
 
 #include "CoWorker.h"
+#include "SpecialWorker.h"
 
 #include <cfloat>
 
 /*O(n^6)*/
-inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
+inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, Matching *&matching, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
 {
 	LookupT lookup = new LookupArg[base.ring.n];
 	for (int i = 0; i < base.ring.n; i++)
@@ -23,6 +24,18 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 	for (int basei = 0; basei < base.ring.n; basei++)
 	{
 		workers[currentworker]->initlookupinv(basei, &base, &match, lookup, skiparea);
+		currentworker = (currentworker + 1) % nworkers;
+	}
+	semaphore->acquire(base.ring.n);
+
+	if (aborted)
+	{
+		return lookup;
+	}
+
+	for (int basei = 0; basei < base.ring.n; basei++)
+	{
+		workers[currentworker]->updateexitcosts(basei, &base, &match, lookup);
 		currentworker = (currentworker + 1) % nworkers;
 	}
 	semaphore->acquire(base.ring.n);
@@ -55,6 +68,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 			semaphore->acquire();
 		}
 
+		specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &matching);
 
 		if (aborted)
 		{
@@ -62,6 +76,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 		}
 	}//basecut
 
+	specialsemaphore->acquire(base.ring.n - 2);
 
 	return lookup;
 }

@@ -15,9 +15,11 @@ public:
 	~CoWorker() override;
 signals:
 	void initlookupinv(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+	void updateexitcosts(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 	void matchinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private slots:
 void initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+void updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 void matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private:
 	QThread thread;
