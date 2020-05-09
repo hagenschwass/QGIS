@@ -46,6 +46,7 @@ void HPolygonMatcher::initGui()
 {
 	intermediate = new Intermediate();
 	connect(&intermediate->worker, SIGNAL(lines(std::vector<Line> *)), this, SLOT(lines(std::vector<Line> *)));
+	connect(&intermediate->worker, SIGNAL(triangles(std::vector<Triangle> *)), this, SLOT(triangles(std::vector<Triangle> *)));
 
 	mSep=interface->layerMenu()->addSeparator();
 	mScanaction = interface->layerMenu()->addAction("Scan for symmetry");
@@ -124,29 +125,69 @@ void HPolygonMatcher::scan()
 void HPolygonMatcher::lines(std::vector<Line> *lines)
 {
 	QgsFeature feature;
+	QgsFeature featureinv;
 	QgsAttributes attrs;
 	for (auto &att : mLayer->attributeList())
 	{
 		attrs.append(mLayer->attributeDisplayName(att));
 	}
 	feature.setAttributes(attrs);
-	
+	featureinv.setAttributes(attrs);
+
 	QgsPolylineXY ring;
+	QgsPolylineXY ringinv;
 	for (Line &line : *lines)
 	{
 		ring.push_back(QgsPointXY(line.p1.x, line.p1.y));
-		//ring.push_front(QgsPointXY(line.p2.x, line.p2.y));
+		ringinv.push_front(QgsPointXY(line.p2.x, line.p2.y));
 	}
 	ring.push_back(ring.front());
+	ringinv.push_back(ringinv.front());
 	QgsPolygonXY poly;
 	poly.push_back(ring);
+	QgsPolygonXY polyinv;
+	polyinv.push_back(ringinv);
 	QgsMultiPolygonXY multipoly;
 	multipoly.push_back(poly);
+	QgsMultiPolygonXY multipolyinv;
+	multipolyinv.push_back(polyinv);
 	feature.setGeometry(QgsGeometry::fromMultiPolygonXY(multipoly));
+	featureinv.setGeometry(QgsGeometry::fromMultiPolygonXY(multipolyinv));
 	mLayer->startEditing();
 	mLayer->addFeature(feature, QgsFeatureSink::Flag::FastInsert);
+	mLayer->addFeature(featureinv, QgsFeatureSink::Flag::FastInsert);
 	mLayer->commitChanges();
 	delete lines;
+}
+
+void HPolygonMatcher::triangles(std::vector<Triangle> *triangles)
+{
+	mLayer->startEditing();
+	int n = 100;
+	for (auto &triangle : *triangles)
+	{
+		QgsFeature feature;
+		QgsAttributes attrs;
+		for (auto &att : mLayer->attributeList())
+		{
+			attrs.append(mLayer->attributeDisplayName(att).append("%1").arg(n));
+		}
+		feature.setAttributes(attrs);
+
+		QgsPolylineXY ring;
+		ring.push_back(QgsPointXY(triangle.p1.x, triangle.p1.y));
+		ring.push_back(QgsPointXY(triangle.p2.x, triangle.p2.y));
+		ring.push_back(QgsPointXY(triangle.p3.x, triangle.p3.y));
+		ring.push_back(ring.front());
+		QgsPolygonXY poly;
+		poly.push_back(ring);
+		QgsMultiPolygonXY multipoly;
+		multipoly.push_back(poly);
+		feature.setGeometry(QgsGeometry::fromMultiPolygonXY(multipoly));
+		mLayer->addFeature(feature, QgsFeatureSink::Flag::FastInsert);
+	}
+	mLayer->commitChanges();
+	delete triangles;
 }
 
 //////////////////////////////////////////////////////////////////////////

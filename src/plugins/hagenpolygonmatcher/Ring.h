@@ -11,12 +11,17 @@ struct Point
 
 typedef Point* Ring;
 
-inline void computeArea(Ring ring, int n, double &area);
+inline void computeArea(Ring ring, int n, double &area, double &absarea);
 inline void comupteCenterAndArea(Ring ring, Point &center, double &area);
 
 struct Line
 {
 	Point p1, p2;
+};
+
+struct Triangle
+{
+	Point p1, p2, p3;
 };
 
 struct SRing
@@ -31,7 +36,7 @@ extern inline void deleteSRing(SRing &ring);
 struct SRing2
 {
 	SRing ring;
-	double area;
+	double area, absarea;
 };
 
 extern inline SRing2 createSRing2(SRing &ring);

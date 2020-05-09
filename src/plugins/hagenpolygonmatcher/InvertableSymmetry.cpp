@@ -51,3 +51,18 @@ void InvertableSymmetry::fillmatchlines(std::vector<Line> *lines)
 	}
 	delete[] stuff;
 }
+
+void filltrianglesrect(Matching *matching, SRing2 &base, std::vector<Triangle> *triangles)
+{
+	if (matching->rightback)
+	{
+		triangles->push_back({ base.ring.ring[matching->base1], base.ring.ring[matching->base2 % base.ring.n], base.ring.ring[matching->rightback->base1] });
+		filltrianglesrect(matching->rightback, base, triangles);
+		filltrianglesrect(matching->leftback, base, triangles);
+	}
+}
+
+void InvertableSymmetry::filltriangles(std::vector<Triangle> *triangles)
+{
+	filltrianglesrect(matching, base, triangles);
+}

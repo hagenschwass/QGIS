@@ -82,3 +82,4 @@ Testing/*
 /src/plugins/hagenpolygonmatcher/moc_Intermediate.cpp
 /src/plugins/hagenpolygonmatcher/moc_MainWorkder.cpp
 /tests/testdata/test_plugin_path/plugin_started.txt
+/src/plugins/hagenpolygonmatcher/moc_SpecialWorkder.cpp

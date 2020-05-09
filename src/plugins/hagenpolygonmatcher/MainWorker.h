@@ -35,6 +35,7 @@ private:
 	QSemaphore workersemaphore;
 signals:
 	void lines(std::vector<Line> *lines);
+	void triangles(std::vector<Triangle> *triangles);
 };
 
 extern inline void deleteMultiPolygonVector(std::vector<MultiPolygon> *polygons);

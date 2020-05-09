@@ -37,6 +37,7 @@ private:
 private slots:
 	
 	void lines(std::vector<Line> *lines);
+	void triangles(std::vector<Triangle> *triangles);
 
 };
 

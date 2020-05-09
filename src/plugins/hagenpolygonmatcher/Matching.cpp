@@ -72,6 +72,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 
 		if (aborted)
 		{
+			specialsemaphore->release(base.ring.n - basecut - 1);
 			break;
 		}
 	}//basecut

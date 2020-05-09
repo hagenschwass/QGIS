@@ -21,10 +21,13 @@ void Intermediate::abortslot()
 {
 	aborted = true;
 	semaphore.acquire();
+	semaphore.release();
 }
 
 void Intermediate::scanslot(std::vector<MultiPolygon> *polygons)
 {
+	aborted = true;
+	semaphore.acquire();
 	aborted = false;
 	worker.scan(polygons, &aborted, &semaphore);
 }

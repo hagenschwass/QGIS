@@ -10,5 +10,6 @@ public:
 	InvertableSymmetry(SRing2 &base, SRing2 &match, Matching *matching, LookupT lookup);
 
 	void fillmatchlines(std::vector<Line> *lines);
+	void filltriangles(std::vector<Triangle> *triangles);
 
 };
