@@ -11,5 +11,6 @@ public:
 
 	void fillmatchlines(std::vector<Line> *lines);
 	void filltriangles(std::vector<Triangle> *triangles);
+	void fillmatchtriangles(std::vector<Triangle> *triangles);
 
 };

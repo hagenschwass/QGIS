@@ -28,7 +28,7 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 			tempmatching[i].base1 = basei;
 			tempmatching[i].leftback = nullptr;
 			tempmatching[i].rightback = nullptr;
-			tempmatching[i].exitcost = -2.0 * (base->absarea + match->absarea);
+			tempmatching[i].exitcost = -.3 * DBL_MAX;
 		}
 
 		LookupArg &lookupbase = lookup[basei];
@@ -274,7 +274,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 			double basep11yp21yright = pbasej.y - pbasepeek.y, basep21xp11xright = pbasepeek.x - pbasej.x;
 			double baseright = (basep21xp11xright * basedxn - basep11yp21yright * basedyn);
 			double baseh = -(basep11yp21yleft * basedxn + basep21xp11xleft * basedyn);
-			double absbaseh = abs(baseh);
+			//double absbaseh = abs(baseh);
 
 
 			for (int matchcut = 2; matchcut < match->ring.n; matchcut++)
@@ -307,11 +307,82 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
 							double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
 							double matchleft = (matchp21xp11xleft * matchdxn - matchp11yp21yleft * matchdyn);
+
+
+							double dleft1 = matchleft / baseleft;
+							if (dleft1 <= 0.0) continue;
+							double dleft2 = baseleft / matchleft;
+
+
 							double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
 							double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
-							double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
-							double absmatchh = abs(matchh);
 
+
+							double dright1 = matchright / baseright;
+							if (dright1 <= 0.0) continue;
+							double dright2 = baseright / matchright;
+
+
+							double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
+							double dh1 = matchh / baseh;
+							if (dh1 <= 0.0) continue;
+							double dh2 = baseh / matchh;
+
+
+							double childquality;
+							if (dh1 < dh2)
+							{
+								if (left.quality < 0.0)
+								{
+									childquality = left.quality * dh2;
+								}
+								else
+								{
+									childquality = left.quality * dh1;
+								}
+								if (right.quality < 0.0)
+								{
+									childquality += right.quality * dh2;
+								}
+								else
+								{
+									childquality += right.quality * dh1;
+								}
+							}
+							else
+							{
+								if (left.quality < 0.0)
+								{
+									childquality = left.quality * dh1;
+								}
+								else
+								{
+									childquality = left.quality * dh2;
+								}
+								if (right.quality < 0.0)
+								{
+									childquality += right.quality * dh1;
+								}
+								else
+								{
+									childquality += right.quality * dh2;
+								}
+							}
+
+
+							double dynq = childquality + std::min(abs(baseh), abs(matchh)) * (std::min(baseleft, matchleft) - std::max(baseright, matchright));
+							if (dynq < 0.0)
+							{
+								dynq *= std::max(dleft1, dleft2) * std::max(dright1, dright2);
+							}
+							else
+							{
+								dynq *= std::min(dleft1, dleft2) * std::min(dright1, dright2);
+							}
+
+							//double absmatchh = abs(matchh);
+
+							/*
 							double quality = -(std::max(baseleft, matchleft) - std::min(baseright, matchright)) * std::max(absmatchh, absbaseh);
 							if (signbit(baseh) != signbit(matchh))
 							{
@@ -320,10 +391,11 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							else
 							{
 								quality += std::min(absbaseh, absmatchh) * (std::min(baseleft, matchleft) - std::max(baseright, matchright));
-							}
+							}*/
 
 
-							double dynq = quality + left.quality + right.quality;
+
+							//double dynq = quality + left.quality + right.quality;
 							if (dynq > gate.quality)
 							{
 								gate.quality = dynq;

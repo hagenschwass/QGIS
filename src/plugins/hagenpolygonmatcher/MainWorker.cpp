@@ -42,7 +42,7 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 						SRing2 inv2 = invertedSRing2(ring2);
 						double quality = -DBL_MAX;
 						Matching *matching = nullptr;
-						LookupT lookup = computeInvMatching(ring2, inv2, ring2.absarea * .33, quality, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
+						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, quality, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
 						if (*aborted == false)
 						{
 							InvertableSymmetry sym(ring2, inv2, matching, lookup);
@@ -50,7 +50,7 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 							sym.fillmatchlines(lines);
 							emit this->lines(lines);
 							/*std::vector<Triangle> *triangles = new std::vector<Triangle>();
-							sym.filltriangles(triangles);
+							sym.fillmatchtriangles(triangles);
 							emit this->triangles(triangles);*/
 						}
 						deleteMatching(ring2, inv2, lookup);
