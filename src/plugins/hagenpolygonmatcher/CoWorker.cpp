@@ -28,7 +28,7 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 			tempmatching[i].base1 = basei;
 			tempmatching[i].leftback = nullptr;
 			tempmatching[i].rightback = nullptr;
-			tempmatching[i].exitcost = -.3 * DBL_MAX;
+			//tempmatching[i].exitcost = -.3 * DBL_MAX;
 		}
 
 		LookupArg &lookupbase = lookup[basei];
@@ -48,7 +48,7 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 				Lookup &lookupend = lookupmatch[matchi];
 				lookupend.begin = matchi + 1;
 
-
+				//double matcharea = 0.0;
 				double matchareaabs = 0.0;
 				Point &matchp1 = match->ring.ring[matchi];
 				for (int matchj = matchi + 1, matchk = matchi + 2; ; matchj = matchk, matchk++)
@@ -56,7 +56,8 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 					Point &matchp2 = match->ring.ring[matchj % match->ring.n], &matchp3 = match->ring.ring[matchk % match->ring.n];
 					double &matchp1x = matchp1.x, &matchp1y = matchp1.y, &matchp2x = matchp2.x, &matchp2y = matchp2.y, &matchp3x = matchp3.x, &matchp3y = matchp3.y;
 					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
-					double matchareal = .5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+					double matchareal = -.5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+					//matcharea += matchareal;
 					matchareaabs += abs(matchareal);
 					if (matchareaabs > skiparea)
 					{
@@ -96,7 +97,7 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 
 		if (*aborted == false)
 		{
-
+			//double basearea = 0.0;
 			double baseareaabs = 0.0;
 			Point &basep1 = base->ring.ring[basei];
 			for (int basej = basei + 1, basek = basei + 2; basek < basei + base->ring.n; basej = basek++)
@@ -106,7 +107,7 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 				double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
 				double baseareal = .5 * (basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x);
 				baseareaabs += abs(baseareal);
-
+				//basearea += baseareal;
 
 				Lookup *&lookupmatch = lookupbase[basek % base->ring.n];
 				lookupmatch = new Lookup[match->ring.n];
@@ -119,13 +120,15 @@ void CoWorker::initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupA
 					tempmatching[0].base2 = basek;
 					int begin = baseareaabs > skiparea ? -1 : matchi + 1;
 					double matchareaabs = 0.0;
+					//double matcharea = 0.0;
 					Point &matchp1 = match->ring.ring[matchi];
 					for (int matchj = matchi + 1, matchk = matchi + 2; ; matchj = matchk, matchk++)
 					{
 						Point &matchp2 = match->ring.ring[matchj % match->ring.n], &matchp3 = match->ring.ring[matchk % match->ring.n];
 						double &matchp1x = matchp1.x, &matchp1y = matchp1.y, &matchp2x = matchp2.x, &matchp2y = matchp2.y, &matchp3x = matchp3.x, &matchp3y = matchp3.y;
 						double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
-						double matchareal = .5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+						double matchareal = -.5 * (matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x);
+						//matcharea += matchareal;
 						matchareaabs += abs(matchareal);
 						if (begin < 0 && baseareaabs - matchareaabs < skiparea)
 						{
@@ -223,26 +226,26 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 							int matchiup = matchi + match->ring.n;
 							if (matchiup >= target3.begin && matchiup <= target3.end)
 							{
-								target3.matching[matchiup - target3.begin].exitcost = matching.quality;
+								//target3.matching[matchiup - target3.begin].exitcost = matching.quality;
 							}
 						}
 						else if (matchi >= target3.begin)
 						{
-							target3.matching[matchi - target3.begin].exitcost = matching.quality;
+							//target3.matching[matchi - target3.begin].exitcost = matching.quality;
 						}
 						else
 						{
 							int matchiup = matchi + match->ring.n;
 							if (matchiup <= target3.end)
 							{
-								target3.matching[matchiup - target3.begin].exitcost = matching.quality;
+								//target3.matching[matchiup - target3.begin].exitcost = matching.quality;
 							}
 						}
 					}
 					else
 					{
 						if (matchi < target3.begin || matchi > target3.end) continue;
-						target3.matching[matchi - target3.begin].exitcost = matching.quality;
+						//target3.matching[matchi - target3.begin].exitcost = matching.quality;
 					}
 				}
 			}
@@ -274,8 +277,8 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 			double basep11yp21yright = pbasej.y - pbasepeek.y, basep21xp11xright = pbasepeek.x - pbasej.x;
 			double baseright = (basep21xp11xright * basedxn - basep11yp21yright * basedyn);
 			double baseh = -(basep11yp21yleft * basedxn + basep21xp11xleft * basedyn);
-			//double absbaseh = abs(baseh);
-
+			double basehabs = abs(baseh);
+			if (basehabs < 1e-13) continue;
 
 			for (int matchcut = 2; matchcut < match->ring.n; matchcut++)
 			{
@@ -307,95 +310,64 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
 							double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
 							double matchleft = (matchp21xp11xleft * matchdxn - matchp11yp21yleft * matchdyn);
-
-
-							double dleft1 = matchleft / baseleft;
-							if (dleft1 <= 0.0) continue;
-							double dleft2 = baseleft / matchleft;
-
-
 							double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
 							double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
 
-
-							double dright1 = matchright / baseright;
-							if (dright1 <= 0.0) continue;
-							double dright2 = baseright / matchright;
-
+							double hormin = std::min(baseleft, matchleft) - std::max(baseright, matchright);
+							if (hormin < 1e-13) continue;
 
 							double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
+							double matchhabs = abs(matchh);
+							if (matchhabs < 1e-13) continue;
+
 							double dh1 = matchh / baseh;
 							if (dh1 <= 0.0) continue;
+							
+							double hormax = std::max(baseleft, matchleft) - std::min(baseright, matchright);
+							/*double horacio = hormin / hormax, horaciosq = horacio * horacio, horaciocu = horaciosq * horacio;
+
 							double dh2 = baseh / matchh;
-
-
-							double childquality;
+							double dhmin, dhmax;
 							if (dh1 < dh2)
 							{
-								if (left.quality < 0.0)
-								{
-									childquality = left.quality * dh2;
-								}
-								else
-								{
-									childquality = left.quality * dh1;
-								}
-								if (right.quality < 0.0)
-								{
-									childquality += right.quality * dh2;
-								}
-								else
-								{
-									childquality += right.quality * dh1;
-								}
+								dhmin = dh1;
+								dhmax = dh2;
 							}
 							else
 							{
-								if (left.quality < 0.0)
-								{
-									childquality = left.quality * dh1;
-								}
-								else
-								{
-									childquality = left.quality * dh2;
-								}
-								if (right.quality < 0.0)
-								{
-									childquality += right.quality * dh1;
-								}
-								else
-								{
-									childquality += right.quality * dh2;
-								}
+								dhmin = dh2;
+								dhmax = dh1;
 							}
 
-
-							double dynq = childquality + std::min(abs(baseh), abs(matchh)) * (std::min(baseleft, matchleft) - std::max(baseright, matchright));
-							if (dynq < 0.0)
+							double leftquality, rightquality;
+							if (left.quality < 0.0)
 							{
-								dynq *= std::max(dleft1, dleft2) * std::max(dright1, dright2);
+								leftquality = left.quality * dhmax * dhmax * dhmax / horaciocu;//;
 							}
 							else
 							{
-								dynq *= std::min(dleft1, dleft2) * std::min(dright1, dright2);
+								leftquality = left.quality * dhmin * dhmin * dhmin * horaciocu;//;
 							}
-
-							//double absmatchh = abs(matchh);
-
-							/*
-							double quality = -(std::max(baseleft, matchleft) - std::min(baseright, matchright)) * std::max(absmatchh, absbaseh);
-							if (signbit(baseh) != signbit(matchh))
+							if (right.quality < 0.0)
 							{
-								quality += -absbaseh * (baseleft - baseright) - absmatchh * (matchleft - matchright);
+								rightquality = right.quality * dhmax  * dhmax  * dhmax / horaciocu;//;
 							}
 							else
 							{
-								quality += std::min(absbaseh, absmatchh) * (std::min(baseleft, matchleft) - std::max(baseright, matchright));
-							}*/
+								rightquality = right.quality * dhmin * dhmin * dhmin * horaciocu;//;
+							}
+
+							double self = std::min((basehabs), (matchhabs)) * (hormin) *horaciosq * dhmin * dhmin;// * dhmin;
+
+							double dynq = leftquality + rightquality + self;*/
+
+							/**/
+							double quality = -hormax * std::max(matchhabs, basehabs);
+							quality += std::min(basehabs, matchhabs) * hormin;
 
 
 
-							//double dynq = quality + left.quality + right.quality;
+							double dynq = quality + left.quality + right.quality;
 							if (dynq > gate.quality)
 							{
 								gate.quality = dynq;

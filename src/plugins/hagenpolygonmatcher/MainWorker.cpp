@@ -46,12 +46,13 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 						if (*aborted == false)
 						{
 							InvertableSymmetry sym(ring2, inv2, matching, lookup);
-							/**/std::vector<Line> *lines = new std::vector<Line>();
+							/*std::vector<Line> *lines = new std::vector<Line>();
 							sym.fillmatchlines(lines);
-							emit this->lines(lines);
-							/*std::vector<Triangle> *triangles = new std::vector<Triangle>();
+							emit this->lines(lines);*/
+							/**/std::vector<Triangle> *triangles = new std::vector<Triangle>();
+							sym.filltriangles(triangles);
 							sym.fillmatchtriangles(triangles);
-							emit this->triangles(triangles);*/
+							emit this->triangles(triangles);
 						}
 						deleteMatching(ring2, inv2, lookup);
 						deleteSRing2( inv2);

@@ -20,13 +20,51 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 	for (int basei = 0; basei < base->ring.n; basei++)
 	{
 		Lookup *lookupbase = lookup[basei][(basei + basecut) % base->ring.n];
+		Lookup *lookupbaseopposite = lookup[(basei + basecut) % base->ring.n][basei];
 		for (int matchi = 0; matchi < match->ring.n; matchi++)
 		{
 			Lookup &lookupmatch = lookupbase[matchi];
 			for (int matchj = lookupmatch.begin; matchj <= lookupmatch.end; matchj++)
 			{
+				double oppositequality;
+				Lookup &lookupmatchopposite = lookupbaseopposite[matchj % match->ring.n];
+				if (lookupmatchopposite.end >= match->ring.n)
+				{
+					if (lookupmatchopposite.begin >= match->ring.n)
+					{
+						int matchiup = matchi + match->ring.n;
+						if (matchiup < lookupmatchopposite.begin || matchiup > lookupmatchopposite.end) continue;
+						oppositequality = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].quality;
+					}
+					else
+					{
+						if (matchi >= lookupmatchopposite.begin)
+						{
+							oppositequality = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].quality;
+						}
+						else
+						{
+							int matchiup = matchi + match->ring.n;
+							if (matchiup <= lookupmatchopposite.end)
+							{
+								oppositequality = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].quality;
+							}
+							else
+							{
+								continue;
+							}
+						}
+					}
+				}
+				else
+				{
+					if (matchi < lookupmatchopposite.begin || matchi > lookupmatchopposite.end) continue;
+					oppositequality = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].quality;
+				}
+
 				Matching &matchingl = lookupmatch.matching[matchj - lookupmatch.begin];
-				double qualityl = matchingl.quality + matchingl.exitcost;
+
+				double qualityl = matchingl.quality + oppositequality;
 				if (qualityl > *quality)
 				{
 					*quality = qualityl;

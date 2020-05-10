@@ -65,6 +65,7 @@ void filltrianglesrect(Matching *matching, SRing2 &base, std::vector<Triangle> *
 void InvertableSymmetry::filltriangles(std::vector<Triangle> *triangles)
 {
 	filltrianglesrect(matching, base, triangles);
+	filltrianglesrect(getoppositematching(lookup, base, match, matching), base, triangles);
 }
 
 void fillmatchtrianglesrect(Matching *matching, SRing2 &match, std::vector<Triangle> *triangles)
@@ -80,4 +81,5 @@ void fillmatchtrianglesrect(Matching *matching, SRing2 &match, std::vector<Trian
 void InvertableSymmetry::fillmatchtriangles(std::vector<Triangle> *triangles)
 {
 	fillmatchtrianglesrect(matching, match, triangles);
+	fillmatchtrianglesrect(getoppositematching(lookup, base, match, matching), match, triangles);
 }

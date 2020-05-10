@@ -32,7 +32,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 	{
 		return lookup;
 	}
-
+	/*
 	for (int basei = 0; basei < base.ring.n; basei++)
 	{
 		workers[currentworker]->updateexitcosts(basei, &base, &match, lookup);
@@ -43,7 +43,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 	if (aborted)
 	{
 		return lookup;
-	}
+	}*/
 
 	for (int basecut = 2; basecut < base.ring.n; basecut++)
 	{
@@ -68,16 +68,21 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 			semaphore->acquire();
 		}
 
-		specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &matching);
+		if (2 * basecut >= base.ring.n)
+		{
+			specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &matching);
+		}
 
 		if (aborted)
 		{
-			specialsemaphore->release(base.ring.n - basecut - 1);
+			//specialsemaphore->release(base.ring.n - basecut - 1);
+			specialsemaphore->release(base.ring.n / 2 - (2 * basecut >= base.ring.n ? (base.ring.n - basecut - 1) : 0));
 			break;
 		}
 	}//basecut
 
-	specialsemaphore->acquire(base.ring.n - 2);
+	//specialsemaphore->acquire(base.ring.n - 2);
+	specialsemaphore->acquire(base.ring.n / 2);
 
 	return lookup;
 }
@@ -106,4 +111,37 @@ inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 		}
 	}
 	delete[] lookup;
+}
+
+inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching)
+{
+	Lookup &lookupl = lookup[matching->base2 % base.ring.n][matching->base1][matching->match2 % match.ring.n];
+	int match1 = matching->match1;
+	if (lookupl.end >= match.ring.n)
+	{
+		if (lookupl.begin >= match.ring.n)
+		{
+			int match1up = match1 + match.ring.n;
+			if (match1up < lookupl.begin || match1up > lookupl.end) return nullptr;
+			return &lookupl.matching[match1up - lookupl.begin];
+		}
+		else
+		{
+			if (match1 >= lookupl.begin)
+			{
+				return &lookupl.matching[match1 - lookupl.begin];
+			}
+			else
+			{
+				int match1up = match1 + match.ring.n;
+				if (match1up > lookupl.end) return nullptr;
+				return &lookupl.matching[match1up - lookupl.begin];
+			}
+		}
+	}
+	else
+	{
+		if (match1 < lookupl.begin || match1 > lookupl.end) return nullptr;
+		return &lookupl.matching[match1 - lookupl.begin];
+	}
 }
