@@ -15,6 +15,7 @@ SpecialWorker::~SpecialWorker()
 	thread.wait();
 }
 
+/**/
 void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, double *quality, Matching **matching)
 {
 	for (int basei = 0; basei < base->ring.n; basei++)
@@ -87,3 +88,43 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 	}
 	semaphore->release();
 }
+
+
+/*
+void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, double *quality, Matching **matching)
+{
+	for (int basei = 0; basei + basecut < base->ring.n; basei++)
+	{
+		Lookup *lookupbase = lookup[basei][basecut - 1];
+		for (int matchi = 0; matchi < match->ring.n; matchi++)
+		{
+			Lookup &lookupmatch = lookupbase[matchi];
+			for (int matchj = lookupmatch.begin; matchj <= lookupmatch.end; matchj++)
+			{
+
+				Matching &matchingl = lookupmatch.matching[matchj - lookupmatch.begin];
+
+				double qualityl = matchingl.quality + (basecut == base->ring.n - 1 && matchi == matchj - 1 ? 0.0 : matchingl.exitcost);
+				if (qualityl > *quality)
+				{
+					*quality = qualityl;
+					*matching = &matchingl;
+				}
+				if (*aborted)
+				{
+					break;
+				}
+			}
+			if (*aborted)
+			{
+				break;
+			}
+		}
+		if (*aborted)
+		{
+			break;
+		}
+	}
+	semaphore->release();
+}
+*/

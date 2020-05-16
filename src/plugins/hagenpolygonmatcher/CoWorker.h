@@ -14,11 +14,17 @@ public:
 	CoWorker(QSemaphore *semaphore, volatile bool *aborted);
 	~CoWorker() override;
 signals:
-	void initlookupinv(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+	void initlookupinvforbase(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+	void initshortcutsforbase(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
+	void initshortcutsformatch(int matchi, SRing2 *base, SRing2 *match, LookupArg *lookup);
+	void computeshortcutsinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 	void updateexitcosts(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 	void matchinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private slots:
-void initlookupinvslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+void initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
+void initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
+void initshortcutsformatchslot(int matchi, SRing2 *base, SRing2 *match, LookupArg *lookup);
+void computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 void updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 void matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 private:
