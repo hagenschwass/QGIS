@@ -9,7 +9,3 @@ Polygon Matcher was intended to be used for symmetry detection in building footp
 ## Symmetry Line Adjustment
 
 While I have been experiencing symmetry line adjustment with respect to a symmetry line (point and vector) was worst because the shape was turned around the point, and symmetry line adjustment with respect to a vector (symmetry line without point, not fixed, perimeter maximizing) was not accurate (for my mighty), Polygon Matcher offers more independent options for symmetry line adjustment.
-
-# Symmetry-preserving Generalization of Building Footprints in Kartography
-
-If you have symmetrical building footprints and want to orthogonalize them with respect to the symmetry line, you can use "Sympector" (http://hagenschwass.name/Sympector). That tool can also simplify with respect to the symmetry lines. Note that it uses a weaker variation of symmetry detection algorithm than Polygon Matcher and it uses symmetry line adjustment with respect to a vector.
