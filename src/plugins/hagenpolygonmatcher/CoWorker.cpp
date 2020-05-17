@@ -29,6 +29,7 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 		Matching *tempmatching = new Matching[match->ring.n];
 		for (int i = 0; i < match->ring.n; i++)
 		{
+			tempmatching[i].quality = 0.0;
 			tempmatching[i].base1 = basei;
 			tempmatching[i].leftback = nullptr;
 			tempmatching[i].rightback = nullptr;
@@ -44,7 +45,7 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 
 			for (int matchi = 0; matchi < match->ring.n; matchi++)
 			{
-				tempmatching[0].quality = 0.0;
+				tempmatching[0].cost = 0.0;
 				tempmatching[0].match1 = matchi;
 				tempmatching[0].match2 = matchi + 1;
 				tempmatching[0].base2 = basei + 1;
@@ -433,7 +434,7 @@ void CoWorker::computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRi
 			Point &pmatchi = match->ring.ring[matchi], &pmatchj = match->ring.ring[(matchi + matchcut) % match->ring.n];
 
 			Matching &gate = lookupl.matching[matchi + matchcut - lookupl.begin];
-			double &quality = gate.quality;
+			double &quality = gate.cost;
 			quality = -DBL_MAX;
 
 			for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
@@ -462,7 +463,7 @@ void CoWorker::computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRi
 					double matchareal = matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x;
 
 
-					double dynq = left.quality + right.quality - abs(matchareal) - basearealabs;
+					double dynq = left.cost + right.cost - abs(matchareal) - basearealabs;
 					if (dynq > quality)
 					{
 						quality = dynq;
@@ -515,7 +516,7 @@ void CoWorker::initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 				Point &matchp1 = match->ring.ring[matchi], &matchp3 = match->ring.ring[matchj % match->ring.n];
 
 				Matching &gate = lookupmatch.matching[matchj - lookupmatch.begin];
-				double &quality = gate.quality;
+				double &quality = gate.cost;
 				quality = -DBL_MAX;
 
 				for (int matchpeek = matchi + 1; matchpeek < matchj; matchpeek++)
@@ -542,7 +543,7 @@ void CoWorker::initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
 					double matchareal = matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x;
 
-					double dynq = right.quality + left.quality - abs(matchareal);
+					double dynq = right.cost + left.cost - abs(matchareal);
 					if (dynq > quality) quality = dynq;
 				}
 
@@ -579,7 +580,7 @@ void CoWorker::initshortcutsformatchslot(int matchi, SRing2 *base, SRing2 *match
 				Point &basep1 = base->ring.ring[basei], &basep3 = base->ring.ring[(basei + basecut) % base->ring.n];
 
 				Matching &gate = lookupmatch.matching[matchj - lookupmatch.begin];
-				double &quality = gate.quality;
+				double &quality = gate.cost;
 				quality = -DBL_MAX;
 
 				for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
@@ -598,7 +599,7 @@ void CoWorker::initshortcutsformatchslot(int matchi, SRing2 *base, SRing2 *match
 					double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
 					double baseareal = basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x;
 
-					double dynq = left.quality + right.quality - abs(baseareal);
+					double dynq = left.cost + right.cost - abs(baseareal);
 					if (dynq > quality) quality = dynq;
 				}
 
@@ -736,7 +737,11 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 	semaphore->release();
 }
 
-#define RELUCTANCE		.5
+//min: .333333333333
+#define RELUCTANCE		.333333333333333
+
+//min: 6.
+#define STAGNATION		7.
 
 void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup)
 {
@@ -782,8 +787,8 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							Lookup &lookupright = lookup[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchpeek % match->ring.n];
 							int matchindexright = matchpeek >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
 							if (matchindexright < lookupright.begin || matchindexright > lookupright.end) continue;
-							Matching &right = lookupright.matching[matchindexright - lookupright.begin];
 
+							Matching &right = lookupright.matching[matchindexright - lookupright.begin];
 							Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
 
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
@@ -792,7 +797,29 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
 							double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
 
-							double hormin = std::min(baseleft, matchleft) - std::max(baseright, matchright);
+							double rightmax, rightmin;
+							if (baseright < matchright)
+							{
+								rightmax = matchright;
+								rightmin = baseright;
+							}
+							else
+							{
+								rightmin = matchright;
+								rightmax = baseright;
+							}
+							double leftmax, leftmin;
+							if (baseleft < matchleft)
+							{
+								leftmax = matchleft;
+								leftmin = baseleft;
+							}
+							else
+							{
+								leftmin = matchleft;
+								leftmax = baseleft;
+							}
+							double hormin = leftmin - rightmax;
 							if (hormin < 1e-13) continue;
 
 							double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
@@ -802,7 +829,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							double dh1 = matchh / baseh;
 							if (dh1 < 0.0) continue;
 
-							double hormax = std::max(baseleft, matchleft) - std::min(baseright, matchright);
+							double hormax = leftmax - rightmin;
 							double vertmax, vertmin;
 							if (basehabs > matchhabs)
 							{
@@ -814,15 +841,23 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 								vertmin = basehabs;
 								vertmax = matchhabs;
 							}
-							double quality = -hormax * vertmax;
-							quality += (vertmin + RELUCTANCE * vertmax ) / (1.0 + RELUCTANCE) * (hormin + RELUCTANCE * hormax) / (1.0 + RELUCTANCE);
 
+							double quality = (vertmin + RELUCTANCE * vertmax) / (1.0 + RELUCTANCE) * (hormin + RELUCTANCE * hormax) / (1.0 + RELUCTANCE);
+							//double quality = vertmin * hormin * 2.;
 
+							double inq = left.quality + right.quality;
 
-							double dynq = (quality + left.quality + right.quality);
-							if (dynq > gate.quality)
+							if (inq / quality > STAGNATION) continue;
+
+							//double cost = baselength * basehabs + matchlength * matchhabs;
+							double cost = vertmax * hormax;
+							double incost = left.cost + right.cost;
+
+							double dynq = (quality - cost + inq + incost);
+							if (dynq > gate.quality + gate.cost)
 							{
-								gate.quality = dynq;
+								gate.quality = quality + inq;
+								gate.cost = incost - cost;
 								gate.leftback = &left;
 								gate.rightback = &right;
 							}

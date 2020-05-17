@@ -6,7 +6,7 @@
 #include <cfloat>
 
 /*O(n^6)*/
-inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, Matching *&matching, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
+inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, double &cost, Matching *&matching, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
 {
 	LookupT lookup = new LookupArg[base.ring.n];
 	for (int i = 0; i < base.ring.n; i++)
@@ -123,7 +123,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 
 		if (2 * basecut >= base.ring.n)
 		{
-			specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &matching);
+			specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &cost, &matching);
 			specialworkerstartedcount++;
 		}
 

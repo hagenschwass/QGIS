@@ -40,10 +40,10 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 					if (ring2.area > 1e-7)
 					{
 						SRing2 inv2 = invertedSRing2(ring2);
-						double quality = -DBL_MAX;
+						double quality = 0.0, cost = -DBL_MAX;
 						Matching *matching = nullptr;
-						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, quality, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
-						if (*aborted == false)
+						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, quality, cost, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
+						if (*aborted == false && quality / cost < -.95)
 						{
 							InvertableSymmetry sym(ring2, inv2, matching, lookup);
 							/*std::vector<Line> *lines = new std::vector<Line>();
