@@ -7,6 +7,7 @@ SpecialWorker::SpecialWorker(QSemaphore *semaphore, volatile bool *aborted) :
 	moveToThread(&thread);
 	connect(this, SIGNAL(searchbestmatch(int, SRing2 *, SRing2 *, LookupArg *, double*, double*,Matching**)), this, SLOT(searchbestmatchslot(int, SRing2 *, SRing2 *, LookupArg *, double*, double*,Matching**)));
 	thread.start();
+	thread.setPriority(QThread::Priority::LowPriority);
 }
 
 SpecialWorker::~SpecialWorker()

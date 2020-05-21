@@ -1,5 +1,8 @@
 #pragma once
 
+typedef int ConstraintArg;
+typedef ConstraintArg* Constraint;
+
 #include "Ring.h"
 class CoWorker;
 class SpecialWorker;
@@ -22,6 +25,8 @@ typedef Lookup** LookupArg;
 typedef LookupArg* LookupT;
 
 extern inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, double &cost, Matching *&, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted);
-extern inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup);
 
+extern inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int base1, int match1, int base2mod, int match2mod);
 extern inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching);
+
+extern inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup);

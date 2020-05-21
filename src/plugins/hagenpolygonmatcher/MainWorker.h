@@ -36,6 +36,7 @@ private:
 signals:
 	void lines(std::vector<Line> *lines);
 	void triangles(std::vector<Triangle> *triangles);
+	void ring(SRing *ring);
 };
 
 extern inline void deleteMultiPolygonVector(std::vector<MultiPolygon> *polygons);

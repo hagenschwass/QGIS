@@ -47,6 +47,7 @@ void HPolygonMatcher::initGui()
 	intermediate = new Intermediate();
 	connect(&intermediate->worker, SIGNAL(lines(std::vector<Line> *)), this, SLOT(lines(std::vector<Line> *)));
 	connect(&intermediate->worker, SIGNAL(triangles(std::vector<Triangle> *)), this, SLOT(triangles(std::vector<Triangle> *)));
+	connect(&intermediate->worker, SIGNAL(ring(SRing*)), this, SLOT(ring(SRing*)));
 
 	mSep=interface->layerMenu()->addSeparator();
 	mScanaction = interface->layerMenu()->addAction("Scan for symmetry");
@@ -188,6 +189,35 @@ void HPolygonMatcher::triangles(std::vector<Triangle> *triangles)
 	}
 	mLayer->commitChanges();
 	delete triangles;
+}
+
+void HPolygonMatcher::ring(SRing *sring)
+{
+	QgsFeature feature;
+	QgsAttributes attrs;
+	for (auto &att : mLayer->attributeList())
+	{
+		attrs.append(mLayer->attributeDisplayName(att));
+	}
+	feature.setAttributes(attrs);
+
+	QgsPolylineXY ring;
+	for (int i = 0; i < sring->n; i++)
+	{
+		ring.push_back(QgsPointXY(sring->ring[i].x, sring->ring[i].y));
+	}
+	ring.push_back(ring.front());
+	QgsPolygonXY poly;
+	poly.push_back(ring);
+	QgsMultiPolygonXY multipoly;
+	multipoly.push_back(poly);
+	feature.setGeometry(QgsGeometry::fromMultiPolygonXY(multipoly));
+	mLayer->startEditing();
+	mLayer->addFeature(feature, QgsFeatureSink::Flag::FastInsert);
+	mLayer->commitChanges();
+
+	deleteSRing(*sring);
+	delete sring;
 }
 
 //////////////////////////////////////////////////////////////////////////

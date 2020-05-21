@@ -271,6 +271,19 @@ inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 }
 */
 
+inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int base1, int match1, int base2mod, int match2mod)
+{
+	Lookup &lookupl = lookup[base1][base2mod][match1];
+	if (match2mod < match1)
+	{
+
+	}
+	else
+	{
+	}
+	return nullptr;
+}
+
 inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching)
 {
 	Lookup &lookupl = lookup[matching->base2 % base.ring.n][matching->base1][matching->match2 % match.ring.n];

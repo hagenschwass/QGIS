@@ -20,6 +20,7 @@ signals:
 	void computeshortcutsinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 	void updateexitcosts(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 	void matchinv(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
+	void findbestgate(int basei, int matchi, SRing2 *base, SRing2 *match, ConstraintArg *constraint, LookupArg *lookup, Matching **out);
 private slots:
 void initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup, double skiparea);
 void initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
@@ -27,6 +28,7 @@ void initshortcutsformatchslot(int matchi, SRing2 *base, SRing2 *match, LookupAr
 void computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
 void updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, LookupArg *lookup);
 void matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup);
+void findbestgateslot(int basei, int matchi, SRing2 *base, SRing2 *match, ConstraintArg *constraint, LookupArg *lookup, Matching **out);
 private:
 	QThread thread;
 	QSemaphore *semaphore;

@@ -12,6 +12,7 @@ CoWorker::CoWorker(QSemaphore *semaphore, volatile bool *aborted) :
 	connect(this, SIGNAL(computeshortcutsinv(int, int, SRing2 *, SRing2 *, LookupArg *)), this, SLOT(computeshortcutsinvslot(int, int, SRing2 *, SRing2 *, LookupArg *)));
 	connect(this, SIGNAL(updateexitcosts(int , SRing2 *, SRing2 *, LookupArg *)), this, SLOT(updateexitcostsslot(int , SRing2 *, SRing2 *, LookupArg *)));
 	connect(this, SIGNAL(matchinv(/**/int , int , SRing2 *, SRing2 *, LookupArg *)), this, SLOT(matchinvslot(/**/int , int , SRing2 *, SRing2 *, LookupArg *)));
+	connect(this, SIGNAL(findbestgate(int, int, SRing2 *, SRing2 *, ConstraintArg*, LookupArg *, Matching**)), this, SLOT(findbestgateslot(int, int, SRing2 *, SRing2 *, ConstraintArg*, LookupArg *, Matching**)));
 	thread.start();
 }
 
@@ -1003,3 +1004,59 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 	semaphore->release();
 }
 */
+
+void CoWorker::findbestgateslot(int basei, int matchi, SRing2 *base, SRing2 *match, ConstraintArg *constraint, LookupArg *lookup, Matching **out)
+{
+	if (*aborted == false)
+	{
+		for (int gbasei = 0; gbasei < base->ring.n; gbasei++)
+		{
+			if (gbasei != basei)
+			{
+				LookupArg &lookup1 = lookup[gbasei];
+				int baseiup = gbasei > basei ? basei + base->ring.n : basei;
+				for (int gmatchi = 0; gmatchi < match->ring.n; gmatchi++)
+				{
+					if (gmatchi != matchi && constraint[gbasei] == gmatchi)
+					{
+						for (int gbasej = baseiup + 1; gbasej < gbasei + base->ring.n; gbasej++)
+						{
+							Lookup *lookup2 = lookup1[gbasej % base->ring.n];
+							Lookup &lookup3 = lookup2[gmatchi];
+							int matchiup = matchi < gmatchi ? matchi + match->ring.n : matchi;
+							int matchjbegin = std::max(matchiup + 1, lookup3.begin);
+							for (int gmatchj = matchjbegin; gmatchj <= lookup3.end; gmatchj++)
+							{
+								if (constraint[gbasej % base->ring.n] != (gmatchj % match->ring.n)) continue;
+								Matching &matching = lookup3.matching[gmatchj - lookup3.begin];
+								Matching *rightback = matching.rightback;
+								if (rightback == nullptr) continue;
+								if (rightback->base1 == basei && rightback->match1 == matchi)
+								{
+									double q = matching.quality - matching.cost;
+									if (*out == nullptr || q > (*out)->quality)
+									{
+										*out = &matching;
+									}
+								}
+							}//gmatchj
+							if (*aborted)
+							{
+								break;
+							}
+						}//gbasej
+						if (*aborted)
+						{
+							break;
+						}
+					}
+				}//gmatchi
+				if (*aborted)
+				{
+					break;
+				}
+			}
+		}//gbasei
+	}
+	semaphore->release();
+}
