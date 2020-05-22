@@ -1011,7 +1011,7 @@ void CoWorker::findbestgateslot(int basei, int matchi, SRing2 *base, SRing2 *mat
 	{
 		for (int gbasei = 0; gbasei < base->ring.n; gbasei++)
 		{
-			if (gbasei != basei)
+			if (constraint[gbasei] > -1 && gbasei != basei)
 			{
 				LookupArg &lookup1 = lookup[gbasei];
 				int baseiup = gbasei > basei ? basei + base->ring.n : basei;
@@ -1021,6 +1021,7 @@ void CoWorker::findbestgateslot(int basei, int matchi, SRing2 *base, SRing2 *mat
 					{
 						for (int gbasej = baseiup + 1; gbasej < gbasei + base->ring.n; gbasej++)
 						{
+							if (constraint[gbasej % base->ring.n] < 0) continue;
 							Lookup *lookup2 = lookup1[gbasej % base->ring.n];
 							Lookup &lookup3 = lookup2[gmatchi];
 							int matchiup = matchi < gmatchi ? matchi + match->ring.n : matchi;

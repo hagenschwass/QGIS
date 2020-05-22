@@ -83,12 +83,30 @@ inline bool computeSymmetryBeginEndInv(SRing2 &base, SymmetryMatches &matches)
 		{
 			if (matches.match[ib].match <= ib)
 			{
-				for (int ie = base.ring.n; ie > ib; ie--)
+				bool shift = false;
+				int lastmatch = ib;
+				for (int ie = base.ring.n - 1; ie > ib; ie--)
 				{
-					int iemod = ie == base.ring.n ? 0 : ie;
-					if (matches.base[iemod].next != &matches.base[iemod])
+					if (matches.base[ie].next != &matches.base[ie])
 					{
-						if (matches.match[iemod].match >= ie)
+						int match = matches.match[ie].match;
+						if (shift)
+						{
+							match += base.ring.n;
+						}
+						else
+						{
+							if (match < lastmatch)
+							{
+								shift = true;
+								match += base.ring.n;
+							}
+							else
+							{
+								lastmatch = match;
+							}
+						}
+						if (match >= ie)
 						{
 							matches.ie = ie;
 							break;
@@ -131,7 +149,7 @@ inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matches)
 	}
 }
 
-#define MAXRELAX			5
+#define MAXRELAX			7
 
 inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches, LookupT lookup)
 {
