@@ -5,8 +5,13 @@
 
 #include <cfloat>
 
+inline MatchingResult initMatchingResult()
+{
+	return{ nullptr, nullptr, 0.0, -DBL_MAX };
+}
+
 /*O(n^6)*/
-inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, double &cost, Matching *&matching, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
+inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, MatchingResult &result, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
 {
 	LookupT lookup = new LookupArg[base.ring.n];
 	for (int i = 0; i < base.ring.n; i++)
@@ -123,7 +128,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 
 		if (2 * basecut >= base.ring.n)
 		{
-			specialworker->searchbestmatch(basecut, &base, &match, lookup, &quality, &cost, &matching);
+			specialworker->searchbestmatch(basecut, &base, &match, lookup, &result);
 			specialworkerstartedcount++;
 		}
 
@@ -284,6 +289,7 @@ inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int
 	return nullptr;
 }
 
+/*
 inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching)
 {
 	Lookup &lookupl = lookup[matching->base2 % base.ring.n][matching->base1][matching->match2 % match.ring.n];
@@ -315,4 +321,4 @@ inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match
 		if (match1 < lookupl.begin || match1 > lookupl.end) return nullptr;
 		return &lookupl.matching[match1 - lookupl.begin];
 	}
-}
+}*/

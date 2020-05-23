@@ -5,15 +5,18 @@
 MainWorker::MainWorker(volatile bool *aborted) :
 	specialworker(&specialsemaphore, aborted),
 	nworkers(QThread::idealThreadCount()),
-	workers(new CoWorker*[nworkers])
+	workers(new CoWorker*[nworkers]),
+	microworkers(new MicroWorker *[nworkers])
 {
 	for (int i = 0; i < nworkers; i++)
 	{
 		workers[i] = new CoWorker(&workersemaphore, aborted);
+		microworkers[i] = new MicroWorker(aborted, &workersemaphore);
 	}
 	moveToThread(&thread);
 	connect(this, SIGNAL(scan(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)), this, SLOT(scanslot(std::vector<MultiPolygon> *, volatile bool *, QSemaphore *)));
 	thread.start();
+	workersemaphore.acquire(nworkers);
 }
 
 MainWorker::~MainWorker()
@@ -21,6 +24,7 @@ MainWorker::~MainWorker()
 	for (int i = 0; i < nworkers; i++)
 	{
 		delete workers[i];
+		delete microworkers[i];
 	}
 	thread.exit();
 	thread.wait();
@@ -40,28 +44,36 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 					if (ring2.area > 1e-7)
 					{
 						SRing2 inv2 = invertedSRing2(ring2);
-						double quality = 0.0, cost = -DBL_MAX;
-						Matching *matching = nullptr;
-						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, quality, cost, matching, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
-						if (*aborted == false && matching != nullptr)
+						MatchingResult result = initMatchingResult();
+						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, result, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
+						if (*aborted == false && result.matching != nullptr)
 						{
-							SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, matching, lookup);
+							SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, result, lookup);
 							if (*aborted == false)
 							{
-								findSymmetryMatchesGates(sms, ring2, inv2, lookup, nworkers, workers, &workersemaphore, *aborted);
-								if (*aborted == false)
+								if (computeSymmetryBeginEndInv(ring2, sms))
 								{
-									if (computeSymmetryBeginEndInv(ring2, sms))
+									if (*aborted == false)
 									{
+										orderSymmetryMatchesInv(ring2, sms);
 										if (*aborted == false)
 										{
-											orderSymmetryMatchesInv(ring2, sms);
-											if (*aborted == false)
+											PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, result.quality);
+											if (*aborted == false && pointmatch != nullptr)
 											{
-												PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, lookup);
-												if (*aborted == false && pointmatch != nullptr)
+
+
+												//findSymmetryMatchesGates(sms, ring2, inv2, lookup, nworkers, workers, &workersemaphore, *aborted);
+												if (*aborted == false)
 												{
-													SRing symmetricalring = invertableSymmetry2Ring(ring2, pointmatch);
+												}
+
+
+												//adjustSymmetryInv(inv2, pointmatch, 1e-11, nworkers, microworkers, &workersemaphore, *aborted);
+												if (*aborted == false)
+												{
+													//updateTurnedIndexesInv(sms);
+													SRing symmetricalring = invertableSymmetry2Ring(inv2, pointmatch);
 													emit this->ring(new SRing(symmetricalring));
 												}
 											}
@@ -77,8 +89,12 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 							emit this->triangles(triangles);
 */
 							deleteSymmetryMatches(sms);
+							deleteMatching(ring2, inv2, lookup);
 						}
-						deleteMatching(ring2, inv2, lookup);
+						else
+						{
+							deleteMatching(ring2, inv2, lookup);
+						}
 						deleteSRing2( inv2);
 					}
 					if (*aborted)

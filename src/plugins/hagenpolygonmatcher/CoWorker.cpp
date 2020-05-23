@@ -48,8 +48,8 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 			{
 				tempmatching[0].cost = 0.0;
 				tempmatching[0].match1 = matchi;
-				tempmatching[0].match2 = matchi + 1;
-				tempmatching[0].base2 = basei + 1;
+				//tempmatching[0].match2 = matchi + 1;
+				//tempmatching[0].base2 = basei + 1;
 				Lookup &lookupend = lookupmatch[matchi];
 				lookupend.begin = matchi + 1;
 
@@ -71,8 +71,8 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 					}
 					//tempmatching[matchk - matchi - 1].quality = -2.0 * matchareaabs;
 					tempmatching[matchk - matchi - 1].match1 = matchi;
-					tempmatching[matchk - matchi - 1].match2 = matchk;
-					tempmatching[matchk - matchi - 1].base2 = basei + 1;
+					//tempmatching[matchk - matchi - 1].match2 = matchk;
+					//tempmatching[matchk - matchi - 1].base2 = basei + 1;
 					if (matchk == matchi + match->ring.n - 1)
 					{
 						lookupend.matching = new Matching[matchk - matchi];
@@ -117,8 +117,8 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 				{
 					//tempmatching[0].quality = -2.0 * baseareaabs;
 					tempmatching[0].match1 = matchi;
-					tempmatching[0].match2 = matchi + 1;
-					tempmatching[0].base2 = basek;
+					//tempmatching[0].match2 = matchi + 1;
+					//tempmatching[0].base2 = basek;
 					int begin = baseareaabs > skiparea ? -1 : matchi + 1;
 					double matchareaabs = 0.0;
 					Point &matchp1 = match->ring.ring[matchi];
@@ -146,8 +146,8 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 						}
 						//tempmatching[matchk - matchi - 1].quality = -2.0 * matchareaabs - 2.0 * baseareaabs;
 						tempmatching[matchk - matchi - 1].match1 = matchi;
-						tempmatching[matchk - matchi - 1].match2 = matchk;
-						tempmatching[matchk - matchi - 1].base2 = basek;
+						//tempmatching[matchk - matchi - 1].match2 = matchk;
+						//tempmatching[matchk - matchi - 1].base2 = basek;
 						if (matchk == matchi + match->ring.n - 1)
 						{
 							Lookup &lookupend = lookupmatch[matchi];
@@ -843,7 +843,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 								vertmax = matchhabs;
 							}
 
-							double quality = (vertmin + RELUCTANCE * vertmax) / (1.0 + RELUCTANCE) * (hormin + RELUCTANCE * hormax) / (1.0 + RELUCTANCE);
+							double quality = (vertmin + (RELUCTANCE * vertmax)) / (1.0 + RELUCTANCE) * (hormin + (RELUCTANCE * hormax)) / (1.0 + RELUCTANCE);
 							//double quality = vertmin * hormin * 2.;
 
 							double inq = left.quality + right.quality;

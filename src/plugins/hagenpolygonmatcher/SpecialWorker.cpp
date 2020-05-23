@@ -5,7 +5,7 @@ SpecialWorker::SpecialWorker(QSemaphore *semaphore, volatile bool *aborted) :
 	aborted(aborted)
 {
 	moveToThread(&thread);
-	connect(this, SIGNAL(searchbestmatch(int, SRing2 *, SRing2 *, LookupArg *, double*, double*,Matching**)), this, SLOT(searchbestmatchslot(int, SRing2 *, SRing2 *, LookupArg *, double*, double*,Matching**)));
+	connect(this, SIGNAL(searchbestmatch(int, SRing2 *, SRing2 *, LookupArg *, MatchingResult*)), this, SLOT(searchbestmatchslot(int, SRing2 *, SRing2 *, LookupArg *, MatchingResult*)));
 	thread.start();
 	thread.setPriority(QThread::Priority::LowPriority);
 }
@@ -17,7 +17,7 @@ SpecialWorker::~SpecialWorker()
 }
 
 /**/
-void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, double *quality, double *cost, Matching **matching)
+void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, MatchingResult *result)
 {
 	for (int basei = 0; basei < base->ring.n; basei++)
 	{
@@ -28,31 +28,28 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 			Lookup &lookupmatch = lookupbase[matchi];
 			for (int matchj = lookupmatch.begin; matchj <= lookupmatch.end; matchj++)
 			{
-				double oppositequality, oppositecost;
 				Lookup &lookupmatchopposite = lookupbaseopposite[matchj % match->ring.n];
+				Matching *opposite;
 				if (lookupmatchopposite.end >= match->ring.n)
 				{
 					if (lookupmatchopposite.begin >= match->ring.n)
 					{
 						int matchiup = matchi + match->ring.n;
 						if (matchiup < lookupmatchopposite.begin || matchiup > lookupmatchopposite.end) continue;
-						oppositequality = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].quality;
-						oppositecost = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].cost;
+						opposite = &lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin];
 					}
 					else
 					{
 						if (matchi >= lookupmatchopposite.begin)
 						{
-							oppositequality = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].quality;
-							oppositecost = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].cost;
+							opposite = &lookupmatchopposite.matching[matchi - lookupmatchopposite.begin];
 						}
 						else
 						{
 							int matchiup = matchi + match->ring.n;
 							if (matchiup <= lookupmatchopposite.end)
 							{
-								oppositequality = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].quality;
-								oppositecost = lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin].cost;
+								opposite = &lookupmatchopposite.matching[matchiup - lookupmatchopposite.begin];
 							}
 							else
 							{
@@ -64,19 +61,19 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 				else
 				{
 					if (matchi < lookupmatchopposite.begin || matchi > lookupmatchopposite.end) continue;
-					oppositequality = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].quality;
-					oppositecost = lookupmatchopposite.matching[matchi - lookupmatchopposite.begin].cost;
+					opposite = &lookupmatchopposite.matching[matchi - lookupmatchopposite.begin];
 				}
 
 				Matching &matchingl = lookupmatch.matching[matchj - lookupmatch.begin];
 
-				double qualityl = matchingl.quality + oppositequality;
-				double costl = matchingl.cost + oppositecost;
-				if (qualityl + costl > *quality + *cost)
+				double qualityl = matchingl.quality + opposite->quality;
+				double costl = matchingl.cost + opposite->cost;
+				if (qualityl + costl > (*result).quality + (*result).cost)
 				{
-					*quality = qualityl;
-					*cost = costl;
-					*matching = &matchingl;
+					(*result).quality = qualityl;
+					(*result).cost = costl;
+					(*result).matching = &matchingl;
+					(*result).opposite = opposite;
 				}
 				if (*aborted)
 				{

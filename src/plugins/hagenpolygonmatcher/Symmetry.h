@@ -38,10 +38,10 @@ extern inline void deleteSymmetryMatches(SymmetryMatches matches);
 class Symmetry
 {
 public:
-	Symmetry(SRing2 &base, SRing2 &match, Matching *matching, LookupT lookup);
+	Symmetry(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup);
 	virtual ~Symmetry();
 protected:
 	SRing2 base, match;
-	Matching *matching;
+	MatchingResult result;
 	LookupT lookup;
 };

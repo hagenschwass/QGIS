@@ -10,7 +10,7 @@ class QSemaphore;
 
 struct Matching
 {
-	int base1, base2, match1, match2;
+	int base1, /*base2, */match1/*, match2*/;
 	double quality, cost;// , exitcost;
 	Matching *leftback, *rightback;
 };
@@ -24,9 +24,17 @@ struct Lookup
 typedef Lookup** LookupArg;
 typedef LookupArg* LookupT;
 
-extern inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, double &cost, Matching *&, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted);
+struct MatchingResult
+{
+	Matching *matching, *opposite;
+	double quality, cost;
+};
+
+extern inline MatchingResult initMatchingResult();
+
+extern inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, MatchingResult &result, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted);
 
 extern inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int base1, int match1, int base2mod, int match2mod);
-extern inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching);
+//extern inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching);
 
 extern inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup);

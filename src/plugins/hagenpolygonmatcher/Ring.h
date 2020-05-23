@@ -9,10 +9,13 @@ struct Point
 	double x, y;
 };
 
+extern inline Point operator*(const double &d, const Point &p);
+extern inline Point operator+(const Point &p1, const Point &p2);
+
 typedef Point* Ring;
 
-inline void computeArea(Ring ring, int n, double &area);
-inline void comupteCenterAndArea(Ring ring, Point &center, double &area);
+extern inline void computeArea(Ring ring, int n, double &area);
+extern inline void comupteCenterAndArea(Ring ring, Point &center, double &area);
 
 struct Line
 {
@@ -31,6 +34,8 @@ struct SRing
 };
 
 extern inline SRing createSRing(QgsPolylineXY &qgsring);
+extern inline SRing cloneSRing(SRing &ring);
+extern inline void swapSRings(SRing &ring1, SRing &ring2);
 extern inline void deleteSRing(SRing &ring);
 
 struct SRing2

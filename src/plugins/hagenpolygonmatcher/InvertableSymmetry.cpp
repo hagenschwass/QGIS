@@ -1,5 +1,6 @@
 #include "InvertableSymmetry.h"
 #include "CoWorker.h"
+#include "MircoWorker.h"
 
 #include <QSemaphore>
 
@@ -11,15 +12,18 @@ void fillmatchlinesrec(SymmetryMatches &matches, Matching *matching, int n)
 		int base = matching->rightback->base1, match = n - matching->rightback->match1 - 1;
 		matches.match[base].base.base = base;
 		matches.match[base].match = match;
-		matches.constraint[base] = matching->rightback->match1;
+		matches.match[base].gate = matching;
+		//matches.constraint[base] = matching->rightback->match1;
 		appendPointMatch(matches.base[base], matches.match[base]);
 		fillmatchlinesrec(matches, matching->leftback, n);
 		fillmatchlinesrec(matches, matching->rightback, n);
 	}
 }
 
-inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, Matching *matching, LookupT lookup)
+inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup)
 {
+	Matching *matching = result.matching, *opposite = result.opposite;
+
 	SymmetryBase sb = new BaseMatch[base.ring.n];
 	SymmetryMatch sm = new PointMatch[base.ring.n];
 	Constraint constraint = new int[base.ring.n];
@@ -31,7 +35,6 @@ inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, Ma
 		sm[i].base.base = -1;
 		sm[i].backptr = nullptr;
 		sm[i].quality = 0.0;
-		sm[i].gate = nullptr;
 		sb[i].base = i;
 		sb[i].next = sb + i;
 		sb[i].prev = sb + i;
@@ -39,15 +42,17 @@ inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, Ma
 
 	sm[matching->base1].match = base.ring.n - matching->match1 - 1;
 	sm[matching->base1].base.base = matching->base1;
-	constraint[matching->base1] = matching->match1;
+	sm[matching->base1].gate = nullptr;
+	//constraint[matching->base1] = matching->match1;
 	appendPointMatch(sb[matching->base1], sm[matching->base1]);
-	sm[matching->base2 % base.ring.n].match = base.ring.n - (matching->match2 % base.ring.n) - 1;
-	sm[matching->base2 % base.ring.n].base.base = matching->base2 % base.ring.n;
-	constraint[matching->base2 % base.ring.n] = matching->match2 % base.ring.n;
-	appendPointMatch(sb[matching->base2 % base.ring.n], sm[matching->base2 % base.ring.n]);
+	sm[opposite->base1].match = base.ring.n - opposite->match1 - 1;
+	sm[opposite->base1].base.base = opposite->base1;
+	sm[opposite->base1].gate = nullptr;
+	//constraint[matching->base2 % base.ring.n] = matching->match2 % base.ring.n;
+	appendPointMatch(sb[opposite->base1], sm[opposite->base1]);
 
 	fillmatchlinesrec(matches, matching, base.ring.n);
-	fillmatchlinesrec(matches, getoppositematching(lookup, base, match, matching), base.ring.n);
+	fillmatchlinesrec(matches, opposite, base.ring.n);
 
 	return matches;
 }
@@ -62,7 +67,7 @@ inline void findSymmetryMatchesGates(SymmetryMatches &matches, SRing2 &base, SRi
 		for (BaseMatch *bm = basematch.next; bm != &basematch; bm = bm->next)
 		{
 			PointMatch *pm = reinterpret_cast<PointMatch*>(bm);
-
+			if (pm->gate != nullptr) continue;
 			workers[currentworker]->findbestgate(i, base.ring.n - pm->match - 1, &base, &match, matches.constraint, lookup, &pm->gate);
 			currentworker = (currentworker + 1) % nworkers;
 			numjobs++;
@@ -151,7 +156,7 @@ inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matches)
 
 #define MAXRELAX			7
 
-inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches, LookupT lookup)
+inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches, double quality)
 {
 	double maxquality = -DBL_MAX;
 	PointMatch *maxqualitymatch = nullptr;
@@ -161,10 +166,9 @@ inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches
 		for (BaseMatch *bm = matches.base[i].next; bm != &matches.base[i]; bm = bm->next)
 		{
 			PointMatch *pm = reinterpret_cast<PointMatch*>(bm);
-			if (pm->gate == nullptr) continue;
 			int match = pm->match, matchinv = base.ring.n - match - 1;
 
-			double quality = pm->quality + pm->gate->quality;
+			double qualityl = pm->quality + (pm->gate == nullptr ? quality : pm->gate->quality);
 
 			int targetsrelaxed = 0;
 			for (int target = i + 1; target <= matches.ie && targetsrelaxed <= MAXRELAX; target++)
@@ -172,15 +176,14 @@ inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches
 				for (BaseMatch *targetbm = matches.base[target].next; targetbm != &matches.base[target]; targetbm = targetbm->next)
 				{
 					PointMatch *targetpm = reinterpret_cast<PointMatch*>(targetbm);
-					if (targetpm->gate == nullptr) continue;
 					int targetmatch = targetpm->match >= target ? targetpm->match - base.ring.n : targetpm->match;
 					if (targetmatch < match)
 					{
-						if (quality > targetpm->quality)
+						if (qualityl > targetpm->quality)
 						{
-							targetpm->quality = quality;
+							targetpm->quality = qualityl;
 							targetpm->backptr = pm;
-							double exitquality = quality + targetpm->gate->quality;
+							double exitquality = qualityl + (targetpm->gate == nullptr ? quality : targetpm->gate->quality);
 							if (exitquality > maxquality)
 							{
 								maxquality = exitquality;
@@ -196,7 +199,67 @@ inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches
 	return maxqualitymatch;
 }
 
-inline SRing invertableSymmetry2Ring(SRing2 &base, PointMatch *pointmatch)
+inline void adjustSymmetryInv(SRing2 &match, PointMatch *pointmatch, double epsilon, int nworker, MicroWorker **microworker, QSemaphore *semaphore, volatile bool &aborted)
+{
+	int pairs = 0;
+	for (PointMatch *runpm = pointmatch; runpm != nullptr; runpm = runpm->backptr)
+	{
+		pairs++;
+	}
+	for (int worker = 0; worker < nworker; worker++)
+	{
+		microworker[worker]->setupAdjustInvSymmetry((pairs / nworker) + 1, semaphore);
+	}
+	int currentworker = 0;
+
+	if (aborted == false)
+	{
+		SRing matchout = cloneSRing(match.ring);
+		for (int i = 0; i < 31; i++)
+		{
+			for (PointMatch *runpm = pointmatch; runpm != nullptr; runpm = runpm->backptr)
+			{
+				microworker[currentworker]->loadAdjustInvSymmetry(runpm);
+				currentworker = (currentworker + 1) % nworker;
+			}
+			for (int worker = 0; worker < nworker; worker++)
+			{
+				microworker[worker]->runAdjustInvSymmetry(match.ring, matchout);
+			}
+			semaphore->acquire(pairs + nworker);
+			if (aborted)
+			{
+				break;
+			}
+			swapSRings(match.ring, matchout);
+		}
+		deleteSRing(matchout);
+	}
+
+	for (int worker = 0; worker < nworker; worker++)
+	{
+		microworker[worker]->clearAdjustInvSymmetry();
+	}
+}
+
+inline void updateTurnedIndexesInv(SymmetryMatches &matches)
+{
+	for (int i = matches.ib; i <= matches.ie; i++)
+	{
+		BaseMatch &base = matches.base[i];
+		for (BaseMatch *bm = base.next; bm != &base; bm = bm->next)
+		{
+			if (bm->base != base.base)
+			{
+				PointMatch *pm = reinterpret_cast<PointMatch*>(bm);
+				pm->match = bm->base;
+				bm->base = base.base;
+			}
+		}
+	}
+}
+
+inline SRing invertableSymmetry2Ring(SRing2 &match, PointMatch *pointmatch)
 {
 	int count = 0;
 	for (PointMatch *run = pointmatch; run != nullptr; run = run->backptr)
@@ -207,22 +270,22 @@ inline SRing invertableSymmetry2Ring(SRing2 &base, PointMatch *pointmatch)
 	int i = 0;
 	for (PointMatch *run = pointmatch; run != nullptr; run = run->backptr)
 	{
-		result.ring[i++] = base.ring.ring[run->match];
+		result.ring[i++] = match.ring.ring[match.ring.n - run->match - 1];
 	}
 	i = 1;
 	for (PointMatch *run = pointmatch; run != nullptr; run = run->backptr)
 	{
 		if (run->base.base != run->match)
 		{
-			result.ring[count - i] = base.ring.ring[run->base.base];
+			result.ring[count - i] = match.ring.ring[match.ring.n - run->base.base - 1];
 			i++;
 		}
 	}
 	return result;
 }
 
-InvertableSymmetry::InvertableSymmetry(SRing2 &base, SRing2 &match, Matching *matching, LookupT lookup) :
-	Symmetry(base, match, matching, lookup)
+InvertableSymmetry::InvertableSymmetry(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup) :
+	Symmetry(base, match, result, lookup)
 {
 }
 
@@ -230,34 +293,34 @@ InvertableSymmetry::~InvertableSymmetry()
 {
 }
 
-void filltrianglesrect(Matching *matching, SRing2 &base, std::vector<Triangle> *triangles)
+void filltrianglesrect(Matching *matching, int base2, int match2, SRing2 &base, std::vector<Triangle> *triangles)
 {
 	if (matching->rightback)
 	{
-		triangles->push_back({ base.ring.ring[matching->base1], base.ring.ring[matching->base2 % base.ring.n], base.ring.ring[matching->rightback->base1] });
-		filltrianglesrect(matching->rightback, base, triangles);
-		filltrianglesrect(matching->leftback, base, triangles);
+		triangles->push_back({ base.ring.ring[matching->base1], base.ring.ring[base2], base.ring.ring[matching->rightback->base1] });
+		filltrianglesrect(matching->rightback, base2, match2, base, triangles);
+		filltrianglesrect(matching->leftback, matching->rightback->base1, matching->rightback->match1, base, triangles);
 	}
 }
 
 void InvertableSymmetry::filltriangles(std::vector<Triangle> *triangles)
 {
-	filltrianglesrect(matching, base, triangles);
-	filltrianglesrect(getoppositematching(lookup, base, match, matching), base, triangles);
+	filltrianglesrect(result.matching, result.opposite->base1, result.opposite->match1, base, triangles);
+	filltrianglesrect(result.opposite, result.matching->base1, result.matching->match1, base, triangles);
 }
 
-void fillmatchtrianglesrect(Matching *matching, SRing2 &match, std::vector<Triangle> *triangles)
+void fillmatchtrianglesrect(Matching *matching, int base2, int match2, SRing2 &match, std::vector<Triangle> *triangles)
 {
 	if (matching->rightback)
 	{
-		triangles->push_back({ match.ring.ring[matching->match1], match.ring.ring[matching->match2 % match.ring.n], match.ring.ring[matching->rightback->match1] });
-		fillmatchtrianglesrect(matching->rightback, match, triangles);
-		fillmatchtrianglesrect(matching->leftback, match, triangles);
+		triangles->push_back({ match.ring.ring[matching->match1], match.ring.ring[match2], match.ring.ring[matching->rightback->match1] });
+		fillmatchtrianglesrect(matching->rightback, base2, match2, match, triangles);
+		fillmatchtrianglesrect(matching->leftback, matching->rightback->base1, matching->rightback->match1, match, triangles);
 	}
 }
 
 void InvertableSymmetry::fillmatchtriangles(std::vector<Triangle> *triangles)
 {
-	fillmatchtrianglesrect(matching, match, triangles);
-	fillmatchtrianglesrect(getoppositematching(lookup, base, match, matching), match, triangles);
+	fillmatchtrianglesrect(result.matching, result.opposite->base1, result.opposite->match1, match, triangles);
+	fillmatchtrianglesrect(result.opposite, result.matching->base1, result.matching->match1, match, triangles);
 }

@@ -2,6 +2,16 @@
 
 #include "qgspointxy.h"
 
+inline Point operator*(const double &d, const Point &p)
+{
+	return{ d * p.x, d * p.y };
+}
+
+inline Point operator+(const Point &p1, const Point &p2)
+{
+	return{ p1.x + p2.x, p1.y + p2.y };
+}
+
 inline void computeArea(Ring ring, int n, double &area)
 {
 	area = 0.0;
@@ -31,6 +41,20 @@ inline SRing createSRing(QgsPolylineXY &qgsring)
 		result.ring[i] = { qgsring[i].x(), qgsring[i].y() };
 	}
 	return result;
+}
+
+inline SRing cloneSRing(SRing &ring)
+{
+	SRing result{ new Point[ring.n], ring.n };
+	memcpy_s(result.ring, sizeof(Point) * ring.n, ring.ring, sizeof(Point) * ring.n);
+	return result;
+}
+
+inline void swapSRings(SRing &ring1, SRing &ring2)
+{
+	SRing save = ring2;
+	ring2 = ring1;
+	ring1 = save;
 }
 
 inline void deleteSRing(SRing &ring)

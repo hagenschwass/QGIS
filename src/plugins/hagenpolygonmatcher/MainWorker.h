@@ -8,6 +8,7 @@
 
 #include "CoWorker.h"
 #include "SpecialWorker.h"
+#include "MircoWorker.h"
 #include "Matching.h"
 #include "Polygon.h"
 #include "InvertableSymmetry.h"
@@ -33,6 +34,7 @@ private:
 	int nworkers;
 	CoWorker **workers;
 	QSemaphore workersemaphore;
+	MicroWorker **microworkers;
 signals:
 	void lines(std::vector<Line> *lines);
 	void triangles(std::vector<Triangle> *triangles);
