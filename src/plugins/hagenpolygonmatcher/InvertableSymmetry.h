@@ -7,7 +7,7 @@ class MicroWorker;
 
 #include <vector>
 
-extern inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup);
+extern inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, FreeMatchingTree &tree);
 extern inline void findSymmetryMatchesGates(SymmetryMatches &matches, SRing2 &base, SRing2 &match, LookupT lookup, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted);
 extern inline bool computeSymmetryBeginEndInv(SRing2 &base, SymmetryMatches &matches);
 extern inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matches);

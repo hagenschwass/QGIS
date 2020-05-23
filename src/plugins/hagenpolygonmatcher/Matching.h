@@ -24,17 +24,31 @@ struct Lookup
 typedef Lookup** LookupArg;
 typedef LookupArg* LookupT;
 
+struct FreeMatching
+{
+	int base, match;
+	FreeMatching *left, *right;
+	double quality;
+};
+
+struct FreeMatchingTree
+{
+	FreeMatching *up, *down;
+	int upcount, downcount;
+};
+
 struct MatchingResult
 {
 	Matching *matching, *opposite;
 	double quality, cost;
+	Constraint constraint;
 };
 
 extern inline MatchingResult initMatchingResult();
+extern inline void deleteMatchingResult(MatchingResult &result);
 
 extern inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, MatchingResult &result, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted);
-
-extern inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int base1, int match1, int base2mod, int match2mod);
-//extern inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching);
-
 extern inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup);
+
+extern inline FreeMatchingTree freeMatchingTree(Matching *up, Matching *down);
+extern inline void deleteFreeMatchingTree(FreeMatchingTree &tree);

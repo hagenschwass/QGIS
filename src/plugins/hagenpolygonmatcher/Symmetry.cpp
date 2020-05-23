@@ -19,7 +19,6 @@ inline void deleteSymmetryMatches(SymmetryMatches matches)
 {
 	delete[] matches.base;
 	delete[] matches.match;
-	delete[] matches.constraint;
 }
 
 Symmetry::Symmetry(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup) :

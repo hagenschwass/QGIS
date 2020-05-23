@@ -4,34 +4,14 @@
 
 #include <QSemaphore>
 
-
-void fillmatchlinesrec(SymmetryMatches &matches, Matching *matching, int n)
+inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, FreeMatchingTree &tree)
 {
-	if (matching->leftback != nullptr)
-	{
-		int base = matching->rightback->base1, match = n - matching->rightback->match1 - 1;
-		matches.match[base].base.base = base;
-		matches.match[base].match = match;
-		matches.match[base].gate = matching;
-		//matches.constraint[base] = matching->rightback->match1;
-		appendPointMatch(matches.base[base], matches.match[base]);
-		fillmatchlinesrec(matches, matching->leftback, n);
-		fillmatchlinesrec(matches, matching->rightback, n);
-	}
-}
-
-inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, MatchingResult &result, LookupT lookup)
-{
-	Matching *matching = result.matching, *opposite = result.opposite;
-
 	SymmetryBase sb = new BaseMatch[base.ring.n];
 	SymmetryMatch sm = new PointMatch[base.ring.n];
-	Constraint constraint = new int[base.ring.n];
-	SymmetryMatches matches = { sb, sm, constraint, -1, -1 };
+	SymmetryMatches matches = { sb, sm, -1, -1 };
 
 	for (int i = 0; i < base.ring.n; i++)
 	{
-		constraint[i] = -1;
 		sm[i].base.base = -1;
 		sm[i].backptr = nullptr;
 		sm[i].quality = 0.0;
@@ -40,19 +20,34 @@ inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, Ma
 		sb[i].prev = sb + i;
 	}
 
-	sm[matching->base1].match = base.ring.n - matching->match1 - 1;
-	sm[matching->base1].base.base = matching->base1;
-	sm[matching->base1].gate = nullptr;
-	//constraint[matching->base1] = matching->match1;
-	appendPointMatch(sb[matching->base1], sm[matching->base1]);
-	sm[opposite->base1].match = base.ring.n - opposite->match1 - 1;
-	sm[opposite->base1].base.base = opposite->base1;
-	sm[opposite->base1].gate = nullptr;
-	//constraint[matching->base2 % base.ring.n] = matching->match2 % base.ring.n;
-	appendPointMatch(sb[opposite->base1], sm[opposite->base1]);
+	sm[tree.up->base].match = base.ring.n - tree.up->match - 1;
+	sm[tree.up->base].base.base = tree.up->base;
+	sm[tree.up->base].gate = nullptr;
+	appendPointMatch(sb[tree.up->base], sm[tree.up->base]);
+	sm[tree.down->base].match = base.ring.n - tree.down->match - 1;
+	sm[tree.down->base].base.base = tree.down->base;
+	sm[tree.down->base].gate = nullptr;
+	appendPointMatch(sb[tree.down->base], sm[tree.down->base]);
 
-	fillmatchlinesrec(matches, matching, base.ring.n);
-	fillmatchlinesrec(matches, opposite, base.ring.n);
+	for (int i = 0; i < tree.upcount; i++)
+	{
+		FreeMatching &fm = tree.up[i];
+		if (fm.left == nullptr) continue;
+		sm[fm.right->base].base.base = fm.right->base;
+		sm[fm.right->base].match = base.ring.n - fm.right->match - 1;
+		sm[fm.right->base].gate = &fm;
+		appendPointMatch(sb[fm.right->base], sm[fm.right->base]);
+	}
+
+	for (int i = 0; i < tree.downcount; i++)
+	{
+		FreeMatching &fm = tree.down[i];
+		if (fm.left == nullptr) continue;
+		sm[fm.right->base].base.base = fm.right->base;
+		sm[fm.right->base].match = base.ring.n - fm.right->match - 1;
+		sm[fm.right->base].gate = &fm;
+		appendPointMatch(sb[fm.right->base], sm[fm.right->base]);
+	}
 
 	return matches;
 }
@@ -68,7 +63,7 @@ inline void findSymmetryMatchesGates(SymmetryMatches &matches, SRing2 &base, SRi
 		{
 			PointMatch *pm = reinterpret_cast<PointMatch*>(bm);
 			if (pm->gate != nullptr) continue;
-			workers[currentworker]->findbestgate(i, base.ring.n - pm->match - 1, &base, &match, matches.constraint, lookup, &pm->gate);
+			workers[currentworker]->findbestgate(i, base.ring.n - pm->match - 1, &base, &match, nullptr, lookup, nullptr);
 			currentworker = (currentworker + 1) % nworkers;
 			numjobs++;
 		}

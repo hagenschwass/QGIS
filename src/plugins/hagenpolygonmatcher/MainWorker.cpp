@@ -48,53 +48,53 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 						LookupT lookup = computeInvMatching(ring2, inv2, ring2.area * .33, result, &specialworker, &specialsemaphore, nworkers, workers, &workersemaphore, *aborted);
 						if (*aborted == false && result.matching != nullptr)
 						{
-							SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, result, lookup);
-							if (*aborted == false)
-							{
-								if (computeSymmetryBeginEndInv(ring2, sms))
-								{
-									if (*aborted == false)
-									{
-										orderSymmetryMatchesInv(ring2, sms);
-										if (*aborted == false)
-										{
-											PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, result.quality);
-											if (*aborted == false && pointmatch != nullptr)
-											{
-
-
-												//findSymmetryMatchesGates(sms, ring2, inv2, lookup, nworkers, workers, &workersemaphore, *aborted);
-												if (*aborted == false)
-												{
-												}
-
-
-												//adjustSymmetryInv(inv2, pointmatch, 1e-11, nworkers, microworkers, &workersemaphore, *aborted);
-												if (*aborted == false)
-												{
-													//updateTurnedIndexesInv(sms);
-													SRing symmetricalring = invertableSymmetry2Ring(inv2, pointmatch);
-													emit this->ring(new SRing(symmetricalring));
-												}
-											}
-										}
-									}
-								}
-							}
 							/*
 							InvertableSymmetry sym(ring2, inv2, matching, lookup);
 							std::vector<Triangle> *triangles = new std::vector<Triangle>();
 							sym.filltriangles(triangles);
 							sym.fillmatchtriangles(triangles);
 							emit this->triangles(triangles);
-*/
-							deleteSymmetryMatches(sms);
+							*/
+							FreeMatchingTree tree = freeMatchingTree(result.matching, result.opposite);
 							deleteMatching(ring2, inv2, lookup);
+							if (*aborted == false)
+							{
+
+								if (*aborted == false)
+								{
+									SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, tree);
+									if (*aborted == false)
+									{
+										if (computeSymmetryBeginEndInv(ring2, sms))
+										{
+											if (*aborted == false)
+											{
+												orderSymmetryMatchesInv(ring2, sms);
+												if (*aborted == false)
+												{
+													PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, result.quality);
+													if (*aborted == false && pointmatch != nullptr)
+													{
+														if (*aborted == false)
+														{
+															SRing symmetricalring = invertableSymmetry2Ring(inv2, pointmatch);
+															emit this->ring(new SRing(symmetricalring));
+														}
+													}
+												}
+											}
+										}
+									}
+									deleteSymmetryMatches(sms);
+								}
+							}
+							deleteFreeMatchingTree(tree);
 						}
 						else
 						{
 							deleteMatching(ring2, inv2, lookup);
 						}
+						deleteMatchingResult(result);
 						deleteSRing2( inv2);
 					}
 					if (*aborted)

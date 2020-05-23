@@ -7,7 +7,12 @@
 
 inline MatchingResult initMatchingResult()
 {
-	return{ nullptr, nullptr, 0.0, -DBL_MAX };
+	return{ nullptr, nullptr, 0.0, -DBL_MAX, nullptr };
+}
+
+inline void deleteMatchingResult(MatchingResult &result)
+{
+	delete[] result.constraint;
 }
 
 /*O(n^6)*/
@@ -165,7 +170,6 @@ inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 	delete[] lookup;
 }
 
-
 /*
 inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, double &quality, Matching *&matching, SpecialWorker *specialworker, QSemaphore *specialsemaphore, int nworkers, CoWorker** workers, QSemaphore *semaphore, volatile bool &aborted)
 {
@@ -276,49 +280,49 @@ inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 }
 */
 
-inline Matching* getmatchingmod(LookupT lookup, SRing2 &base, SRing2 &match, int base1, int match1, int base2mod, int match2mod)
+inline int privateCountMatchingTree(Matching *matching)
 {
-	Lookup &lookupl = lookup[base1][base2mod][match1];
-	if (match2mod < match1)
-	{
-
-	}
-	else
-	{
-	}
-	return nullptr;
+	if (matching->rightback == nullptr) return 1;
+	return privateCountMatchingTree(matching->rightback) + privateCountMatchingTree(matching->leftback) + 1;
 }
 
-/*
-inline Matching* getoppositematching(LookupT lookup, SRing2 &base, SRing2 &match, Matching *matching)
+inline FreeMatching *privateBuildFreeMatchingTree(Matching *matching, FreeMatching *freematching, int &index)
 {
-	Lookup &lookupl = lookup[matching->base2 % base.ring.n][matching->base1][matching->match2 % match.ring.n];
-	int match1 = matching->match1;
-	if (lookupl.end >= match.ring.n)
+	int i = index++;
+	freematching[i].base = matching->base1;
+	freematching[i].match = matching->match1;
+	freematching[i].quality = matching->quality;
+	if (matching->rightback == nullptr)
 	{
-		if (lookupl.begin >= match.ring.n)
-		{
-			int match1up = match1 + match.ring.n;
-			if (match1up < lookupl.begin || match1up > lookupl.end) return nullptr;
-			return &lookupl.matching[match1up - lookupl.begin];
-		}
-		else
-		{
-			if (match1 >= lookupl.begin)
-			{
-				return &lookupl.matching[match1 - lookupl.begin];
-			}
-			else
-			{
-				int match1up = match1 + match.ring.n;
-				if (match1up > lookupl.end) return nullptr;
-				return &lookupl.matching[match1up - lookupl.begin];
-			}
-		}
+		freematching[i].left = nullptr;
+		freematching[i].right = nullptr;
 	}
 	else
 	{
-		if (match1 < lookupl.begin || match1 > lookupl.end) return nullptr;
-		return &lookupl.matching[match1 - lookupl.begin];
+		freematching[i].left = privateBuildFreeMatchingTree(matching->leftback, freematching, index);
+		freematching[i].right = privateBuildFreeMatchingTree(matching->rightback, freematching, index);
 	}
-}*/
+	return &freematching[i];
+}
+
+inline FreeMatchingTree freeMatchingTree(Matching *up, Matching *down)
+{
+	FreeMatchingTree result;
+	int &upcount = result.upcount;
+	upcount = privateCountMatchingTree(up);
+	result.up = new FreeMatching[upcount];
+	upcount = 0;
+	result.up = privateBuildFreeMatchingTree(up, result.up, upcount);
+	int &downcount = result.downcount;
+	downcount = privateCountMatchingTree(down);
+	result.down = new FreeMatching[downcount];
+	downcount = 0;
+	result.down = privateBuildFreeMatchingTree(down, result.down, downcount);
+	return result;
+}
+
+inline void deleteFreeMatchingTree(FreeMatchingTree &tree)
+{
+	delete[] tree.up;
+	delete[] tree.down;
+}

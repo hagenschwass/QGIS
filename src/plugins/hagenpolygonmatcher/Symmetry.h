@@ -17,7 +17,7 @@ struct PointMatch
 	int match;
 	PointMatch *backptr;
 	double quality;
-	Matching *gate;
+	FreeMatching *gate;
 };
 
 typedef PointMatch* SymmetryMatch;
@@ -29,7 +29,6 @@ struct SymmetryMatches
 {
 	SymmetryBase base;
 	SymmetryMatch match;
-	Constraint constraint;
 	int ie, ib;
 };
 

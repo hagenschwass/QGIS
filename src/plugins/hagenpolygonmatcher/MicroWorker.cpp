@@ -65,9 +65,9 @@ void MicroWorker::run()
 			for (int i = 0; i < loadeds; i++)
 			{
 				PointMatch *pm = pointmatches[i];
-				Matching *gate = pm->gate;
+				/*Matching *gate = pm->gate;
 
-				/*
+				
 				Point &pbasei = match.ring[match.n - gate->base1 - 1], &pbasej = match.ring[match.n - (gate->base2 % match.n) - 1];
 				double basedx = pbasej.x - pbasei.x, basedy = pbasej.y - pbasei.y;
 				double baselength = sqrt(basedx * basedx + basedy * basedy);
