@@ -59,7 +59,7 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 							deleteMatching(ring2, inv2, lookup);
 							if (*aborted == false)
 							{
-
+								adjustFreeMatchingTree(ring2, inv2, tree);
 								if (*aborted == false)
 								{
 									SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, tree);

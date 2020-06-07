@@ -299,8 +299,14 @@ inline FreeMatching *privateBuildFreeMatchingTree(Matching *matching, FreeMatchi
 	}
 	else
 	{
+		//int &leftcount = freematching[i].leftcount;
+		//leftcount = index;
 		freematching[i].left = privateBuildFreeMatchingTree(matching->leftback, freematching, index);
+		//leftcount = index - leftcount;
+		int &rightcount = freematching[i].rightcount;
+		rightcount = index;
 		freematching[i].right = privateBuildFreeMatchingTree(matching->rightback, freematching, index);
+		rightcount = index - rightcount;
 	}
 	return &freematching[i];
 }
@@ -319,6 +325,83 @@ inline FreeMatchingTree freeMatchingTree(Matching *up, Matching *down)
 	downcount = 0;
 	result.down = privateBuildFreeMatchingTree(down, result.down, downcount);
 	return result;
+}
+
+inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, int basej, int matchj)
+{
+	if (fm->right == nullptr) return;
+	Transform tbaseleft;
+	Transform tbaseright;
+	Transform tmatchleft;
+	Transform tmatchright;
+	{
+		Point &pbasei = base.ring.ring[fm->base], &pbasej = base.ring.ring[basej];
+		double basedx = pbasej.x - pbasei.x, basedy = pbasej.y - pbasei.y;
+		double baselength = sqrt(basedx * basedx + basedy * basedy);
+		double basedxn = basedx / baselength, basedyn = basedy / baselength;
+
+		Point &pbasepeek = base.ring.ring[fm->right->base];
+		double basep11yp21yleft = pbasei.y - pbasepeek.y, basep21xp11xleft = pbasepeek.x - pbasei.x;
+		double baseleft = (basep21xp11xleft * basedxn - basep11yp21yleft * basedyn);
+		double basep11yp21yright = pbasej.y - pbasepeek.y, basep21xp11xright = pbasepeek.x - pbasej.x;
+		double baseright = (basep21xp11xright * basedxn - basep11yp21yright * basedyn);
+		double baseh = -(basep11yp21yleft * basedxn + basep21xp11xleft * basedyn);
+
+		Point &pmatchi = match.ring.ring[fm->match], &pmatchj = match.ring.ring[matchj];
+		double matchdx = pmatchj.x - pmatchi.x, matchdy = pmatchj.y - pmatchi.y;
+		double matchlength = sqrt(matchdx * matchdx + matchdy * matchdy);
+		double matchdxn = matchdx / matchlength, matchdyn = matchdy / matchlength;
+
+		Point &pmatchpeek = match.ring.ring[fm->right->match];
+		double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
+		double matchleft = (matchp21xp11xleft * matchdxn - matchp11yp21yleft * matchdyn);
+		double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
+		double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
+		double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
+
+		double leftnew = .5 * (matchleft + baseleft);
+		double rightnew = .5 * (matchright + baseright);
+		Point pbaseleft = pbasei + (leftnew * Point{ basedxn, basedyn });
+		Point pbaseright = pbasej + (rightnew * Point{ basedxn, basedyn });
+		Point pmatchleft = pmatchi + (leftnew * Point{ matchdxn, matchdyn });
+		Point pmatchright = pmatchj + (rightnew * Point{ matchdxn, matchdyn });
+
+		double hnew = .5 * (baseh + matchh);
+
+		Point pbasenew = (.5 * (pbaseleft + pbaseright)) + (hnew * Point{ -basedyn, basedxn });
+		Point pmatchnew = (.5 * (pmatchleft + pmatchright)) + (hnew * Point{ matchdyn, -matchdxn });
+
+		tbaseleft = transform(pbasepeek, pbasenew, pbasei);
+		tbaseright = transform(pbasepeek, pbasenew, pbasej);
+		tmatchleft = transform(pmatchpeek, pmatchnew, pmatchi);
+		tmatchright = transform(pmatchpeek, pmatchnew, pmatchj);
+
+		pbasepeek = pbasenew;
+		pmatchpeek = pmatchnew;
+	}
+
+	for (FreeMatching *run = fm->left; run != fm->right; run++)
+	{
+		if (run->right == nullptr) continue;
+		base.ring.ring[run->right->base] = tbaseleft * base.ring.ring[run->right->base];
+		match.ring.ring[run->right->match] = tmatchleft * match.ring.ring[run->right->match];
+	}
+	for (FreeMatching *run = fm->right; run != fm->right + fm->rightcount; run++)
+	{
+		if (run->right == nullptr) continue;
+		base.ring.ring[run->right->base] = tbaseright * base.ring.ring[run->right->base];
+		match.ring.ring[run->right->match] = tmatchright * match.ring.ring[run->right->match];
+	}
+
+	adjustFreeMatching(base, match, fm->left, fm->right->base, fm->right->match);
+	adjustFreeMatching(base, match, fm->right, basej, matchj);
+}
+
+inline void adjustFreeMatchingTree(SRing2 &base, SRing2 &match, FreeMatchingTree &tree)
+{
+	FreeMatching *up = tree.up, *down = tree.down;
+	adjustFreeMatching(base, match, up, down->base, down->match);
+	adjustFreeMatching(base, match, down, up->base, up->match);
 }
 
 inline void deleteFreeMatchingTree(FreeMatchingTree &tree)

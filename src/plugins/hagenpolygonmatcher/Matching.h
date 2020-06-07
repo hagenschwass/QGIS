@@ -28,6 +28,7 @@ struct FreeMatching
 {
 	int base, match;
 	FreeMatching *left, *right;
+	int /*leftcount, */rightcount;
 	double quality;
 };
 
@@ -51,4 +52,5 @@ extern inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double ski
 extern inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup);
 
 extern inline FreeMatchingTree freeMatchingTree(Matching *up, Matching *down);
+extern inline void adjustFreeMatchingTree(SRing2 &base, SRing2 &match, FreeMatchingTree &tree);
 extern inline void deleteFreeMatchingTree(FreeMatchingTree &tree);

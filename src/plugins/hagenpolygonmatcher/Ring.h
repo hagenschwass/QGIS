@@ -11,6 +11,26 @@ struct Point
 
 extern inline Point operator*(const double &d, const Point &p);
 extern inline Point operator+(const Point &p1, const Point &p2);
+extern inline Point operator-(const Point &p1, const Point &p2);
+
+struct Matrix
+{
+	double a[2][2];
+};
+
+extern inline Matrix operator >> (const Point &from, const Point &to);
+
+extern inline Point operator*(const Matrix &m, const Point &p);
+
+struct Transform
+{
+	Matrix m;
+	Point t;
+};
+
+extern inline Point operator*(const Transform &t, const Point &p);
+
+extern inline Transform transform(const Point &from, const Point &to, const Point &about);
 
 typedef Point* Ring;
 

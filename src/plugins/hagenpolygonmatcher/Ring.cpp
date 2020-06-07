@@ -12,6 +12,37 @@ inline Point operator+(const Point &p1, const Point &p2)
 	return{ p1.x + p2.x, p1.y + p2.y };
 }
 
+inline Point operator-(const Point &p1, const Point &p2)
+{
+	return{ p1.x - p2.x, p1.y - p2.y };
+}
+
+inline Matrix operator >> (const Point &from, const Point &to)
+{
+	const double &x = from.x, &y = from.y, &_x = to.x, &_y = to.y;
+	double xsq = x * x, ysq = y * y;
+	double a11 = (_x * x + _y * y) / (xsq + ysq);
+	double a21 = (_y * x - _x * y) / (xsq + ysq);
+	return Matrix{ { {a11, ((_x - a11 * x) / y)}, {a21, ((_y - a21 * x) / y)} } };
+}
+
+inline Point operator*(const Matrix &m, const Point &p)
+{
+	return{ m.a[0][0] * p.x + m.a[0][1] * p.y, m.a[1][0] * p.x + m.a[1][1] * p.y };
+}
+
+inline Point operator*(const Transform &t, const Point &p)
+{
+	return (t.m * p) + t.t;
+}
+
+inline Transform transform(const Point &from, const Point &to, const Point &about)
+{
+	Point vfrom = from - about, vto = to - about;
+	Matrix m = vfrom >> vto;
+	return{ m, about - (m * about) };
+}
+
 inline void computeArea(Ring ring, int n, double &area)
 {
 	area = 0.0;
