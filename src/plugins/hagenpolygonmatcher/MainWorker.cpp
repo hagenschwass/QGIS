@@ -77,7 +77,7 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 													{
 														if (*aborted == false)
 														{
-															SRing symmetricalring = invertableSymmetry2Ring(inv2, pointmatch);
+															SRing symmetricalring = invertableSymmetry2Ring(ring2, inv2, pointmatch);
 															emit this->ring(new SRing(symmetricalring));
 														}
 													}

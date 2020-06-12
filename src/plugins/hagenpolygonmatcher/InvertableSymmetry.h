@@ -14,7 +14,7 @@ extern inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matche
 extern inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches, double quality);
 extern inline void adjustSymmetryInv(SRing2 &match, PointMatch *pointmatch, double epsilon, int nworker, MicroWorker **microworker, QSemaphore *semaphore, volatile bool &aborted);
 extern inline void updateTurnedIndexesInv(SymmetryMatches &matches);
-extern inline SRing invertableSymmetry2Ring(SRing2 &match, PointMatch *pointmatch);
+extern inline SRing invertableSymmetry2Ring(SRing2 &base, SRing2 &match, PointMatch *pointmatch);
 
 class InvertableSymmetry : public Symmetry
 {

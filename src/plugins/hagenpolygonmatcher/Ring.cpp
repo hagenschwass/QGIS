@@ -88,6 +88,16 @@ inline void swapSRings(SRing &ring1, SRing &ring2)
 	ring1 = save;
 }
 
+inline void swapSRingsInv(SRing &ring, SRing &inv)
+{
+	for (int i = 0; i < ring.n; i++)
+	{
+		Point heap = ring.ring[i];
+		ring.ring[i] = inv.ring[inv.n - i - 1];
+		inv.ring[inv.n - i - 1] = heap;
+	}
+}
+
 inline void deleteSRing(SRing &ring)
 {
 	delete[] ring.ring;
@@ -116,4 +126,9 @@ inline SRing2 invertedSRing2(SRing2 &ring2)
 	}
 	result.area = -ring2.area;
 	return result;
+}
+
+inline void swapSRing2sInv(SRing2 &ring, SRing2 &inv)
+{
+	swapSRingsInv(ring.ring, inv.ring);
 }

@@ -15,6 +15,7 @@ struct PointMatch
 {
 	BaseMatch base;
 	int match;
+	bool inv;
 	PointMatch *backptr;
 	double quality;
 	FreeMatching *gate;

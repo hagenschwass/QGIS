@@ -400,8 +400,12 @@ inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, in
 inline void adjustFreeMatchingTree(SRing2 &base, SRing2 &match, FreeMatchingTree &tree)
 {
 	FreeMatching *up = tree.up, *down = tree.down;
-	adjustFreeMatching(base, match, up, down->base, down->match);
-	adjustFreeMatching(base, match, down, up->base, up->match);
+	for (int i = 0; i < 16; i++)
+	{
+		adjustFreeMatching(base, match, up, down->base, down->match);
+		adjustFreeMatching(base, match, down, up->base, up->match);
+		swapSRing2sInv(base, match);
+	}
 }
 
 inline void deleteFreeMatchingTree(FreeMatchingTree &tree)
