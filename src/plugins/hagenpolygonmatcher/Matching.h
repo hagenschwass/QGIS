@@ -28,7 +28,7 @@ struct FreeMatching
 {
 	int base, match;
 	FreeMatching *left, *right;
-	int /*leftcount, */rightcount;
+	/*int leftcount, rightcount;*/
 	double quality;
 };
 

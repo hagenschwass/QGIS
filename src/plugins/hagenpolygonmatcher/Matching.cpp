@@ -303,10 +303,10 @@ inline FreeMatching *privateBuildFreeMatchingTree(Matching *matching, FreeMatchi
 		//leftcount = index;
 		freematching[i].left = privateBuildFreeMatchingTree(matching->leftback, freematching, index);
 		//leftcount = index - leftcount;
-		int &rightcount = freematching[i].rightcount;
-		rightcount = index;
+		//int &rightcount = freematching[i].rightcount;
+		//rightcount = index;
 		freematching[i].right = privateBuildFreeMatchingTree(matching->rightback, freematching, index);
-		rightcount = index - rightcount;
+		//rightcount = index - rightcount;
 	}
 	return &freematching[i];
 }
@@ -380,17 +380,32 @@ inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, in
 		pmatchpeek = pmatchnew;
 	}
 
-	for (FreeMatching *run = fm->left; run != fm->right; run++)
+	int begin = fm->base + 1, end = fm->right->base;
+	if (end < begin) end += base.ring.n;
+	for (int i = begin; i < end; i++)
 	{
-		if (run->right == nullptr) continue;
-		base.ring.ring[run->right->base] = tbaseleft * base.ring.ring[run->right->base];
-		match.ring.ring[run->right->match] = tmatchleft * match.ring.ring[run->right->match];
+		base.ring.ring[i % base.ring.n] = tbaseleft * base.ring.ring[i % base.ring.n];
 	}
-	for (FreeMatching *run = fm->right; run != fm->right + fm->rightcount; run++)
+	begin = fm->match + 1;
+	end = fm->right->match;
+	if (end < begin) end += match.ring.n;
+	for (int i = begin; i < end; i++)
 	{
-		if (run->right == nullptr) continue;
-		base.ring.ring[run->right->base] = tbaseright * base.ring.ring[run->right->base];
-		match.ring.ring[run->right->match] = tmatchright * match.ring.ring[run->right->match];
+		match.ring.ring[i % match.ring.n] = tmatchleft * match.ring.ring[i % match.ring.n];
+	}
+	begin = fm->right->base + 1;
+	end = basej;
+	if (end < begin) end += base.ring.n;
+	for (int i = begin; i < end; i++)
+	{
+		base.ring.ring[i % base.ring.n] = tbaseright * base.ring.ring[i % base.ring.n];
+	}
+	begin = fm->right->match + 1;
+	end = matchj;
+	if (end < begin) end += match.ring.n;
+	for (int i = begin; i < end; i++)
+	{
+		match.ring.ring[i % match.ring.n] = tmatchright * match.ring.ring[i % match.ring.n];
 	}
 
 	adjustFreeMatching(base, match, fm->left, fm->right->base, fm->right->match);
@@ -400,11 +415,12 @@ inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, in
 inline void adjustFreeMatchingTree(SRing2 &base, SRing2 &match, FreeMatchingTree &tree)
 {
 	FreeMatching *up = tree.up, *down = tree.down;
-	for (int i = 0; i < 16; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		adjustFreeMatching(base, match, up, down->base, down->match);
 		adjustFreeMatching(base, match, down, up->base, up->match);
-		swapSRing2sInv(base, match);
+		//swapSRing2sInv(base, match);
+		meanSRing2sInv(base, match);
 	}
 }
 

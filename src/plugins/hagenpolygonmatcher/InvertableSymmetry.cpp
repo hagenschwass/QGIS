@@ -15,7 +15,7 @@ inline SymmetryMatches computeSymmetryMatchesInv(SRing2 &base, SRing2 &match, Fr
 		sm[i].base.base = -1;
 		sm[i].backptr = nullptr;
 		sm[i].quality = 0.0;
-		sm[i].inv = false;
+		//sm[i].inv = false;
 		sb[i].base = i;
 		sb[i].next = sb + i;
 		sb[i].prev = sb + i;
@@ -134,7 +134,7 @@ inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matches)
 			appendPointMatch(basematch, match);
 			match.base.base = match.match;
 			match.match = i;
-			match.inv = true;
+			//match.inv = true;
 		}
 	}
 	for (int i = matches.ie + 1; i < base.ring.n; i++)
@@ -147,7 +147,7 @@ inline void orderSymmetryMatchesInv(SRing2 &base, SymmetryMatches &matches)
 			appendPointMatch(basematch, match);
 			match.base.base = match.match;
 			match.match = i;
-			match.inv = true;
+			//match.inv = true;
 		}
 	}
 }
@@ -268,14 +268,14 @@ inline SRing invertableSymmetry2Ring(SRing2 &base, SRing2 &match, PointMatch *po
 	int i = 0;
 	for (PointMatch *run = pointmatch; run != nullptr; run = run->backptr)
 	{
-		result.ring[i++] = run->inv ? match.ring.ring[match.ring.n - run->match - 1] : base.ring.ring[run->match];
+		result.ring[i++] = /*run->inv ? match.ring.ring[match.ring.n - run->match - 1] : */base.ring.ring[run->match];
 	}
 	i = 1;
 	for (PointMatch *run = pointmatch; run != nullptr; run = run->backptr)
 	{
 		if (run->base.base != run->match)
 		{
-			result.ring[count - i] = run->inv ? match.ring.ring[match.ring.n - run->base.base - 1] : base.ring.ring[run->base.base];
+			result.ring[count - i] = /*run->inv ? match.ring.ring[match.ring.n - run->base.base - 1] : */base.ring.ring[run->base.base];
 			i++;
 		}
 	}

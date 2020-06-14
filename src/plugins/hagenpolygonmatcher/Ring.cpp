@@ -98,6 +98,26 @@ inline void swapSRingsInv(SRing &ring, SRing &inv)
 	}
 }
 
+inline void meanSRings(SRing &r1, SRing &r2)
+{
+	for (int i = 0; i < r1.n; i++)
+	{
+		Point mean = .5 * (r1.ring[i] + r2.ring[i]);
+		r1.ring[i] = mean;
+		r2.ring[i] = mean;
+	}
+}
+
+inline void meanSRingsInv(SRing &ring, SRing &inv)
+{
+	for (int i = 0; i < ring.n; i++)
+	{
+		Point mean = .5 * (ring.ring[i] + inv.ring[inv.n - i - 1]);
+		ring.ring[i] = mean;
+		inv.ring[inv.n - i - 1] = mean;
+	}
+}
+
 inline void deleteSRing(SRing &ring)
 {
 	delete[] ring.ring;
@@ -131,4 +151,9 @@ inline SRing2 invertedSRing2(SRing2 &ring2)
 inline void swapSRing2sInv(SRing2 &ring, SRing2 &inv)
 {
 	swapSRingsInv(ring.ring, inv.ring);
+}
+
+inline void meanSRing2sInv(SRing2 &ring, SRing2 &inv)
+{
+	meanSRingsInv(ring.ring, inv.ring);
 }

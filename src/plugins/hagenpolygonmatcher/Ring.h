@@ -57,6 +57,8 @@ extern inline SRing createSRing(QgsPolylineXY &qgsring);
 extern inline SRing cloneSRing(SRing &ring);
 extern inline void swapSRings(SRing &ring1, SRing &ring2);
 extern inline void swapSRingsInv(SRing &ring, SRing &inv);
+extern inline void meanSRings(SRing &r1, SRing &r2);
+extern inline void meanSRingsInv(SRing &ring, SRing &inv);
 extern inline void deleteSRing(SRing &ring);
 
 struct SRing2
@@ -70,3 +72,4 @@ extern inline void deleteSRing2(SRing2 &ring);
 
 extern inline SRing2 invertedSRing2(SRing2 &ring2);
 extern inline void swapSRing2sInv(SRing2 &ring, SRing2 &inv);
+extern inline void meanSRing2sInv(SRing2 &ring, SRing2 &inv);
