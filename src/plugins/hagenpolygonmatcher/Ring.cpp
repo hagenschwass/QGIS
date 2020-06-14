@@ -135,6 +135,11 @@ inline void deleteSRing2(SRing2 &ring)
 	deleteSRing(ring.ring);
 }
 
+inline SRing2 cloneSRing2(SRing2 &ring)
+{
+	return{ cloneSRing(ring.ring), ring.area };
+}
+
 inline SRing2 invertedSRing2(SRing2 &ring2)
 {
 	SRing2 result;

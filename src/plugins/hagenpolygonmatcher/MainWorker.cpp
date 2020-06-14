@@ -55,40 +55,54 @@ void MainWorker::scanslot(std::vector<MultiPolygon> *polygons, volatile bool *ab
 							sym.fillmatchtriangles(triangles);
 							emit this->triangles(triangles);
 							*/
-							FreeMatchingTree tree = freeMatchingTree(result.matching, result.opposite);
-							deleteMatching(ring2, inv2, lookup);
+							Constraint constraint = createConstraint(ring2, result);
 							if (*aborted == false)
 							{
-								adjustFreeMatchingTree(ring2, inv2, tree);
+								FreeMatchingTrees trees = createFreeMatchingTrees(ring2, lookup, constraint, nworkers, microworkers, &workersemaphore, *aborted);
+								int maintree = result.matching->base1;
+								deleteMatching(ring2, inv2, lookup);
+								deleteConstraint(constraint);
 								if (*aborted == false)
 								{
-									SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, tree);
+									adjustFreeMatchingTrees(ring2, inv2, trees);
 									if (*aborted == false)
 									{
-										if (computeSymmetryBeginEndInv(ring2, sms))
+										SymmetryMatches sms = computeSymmetryMatchesInv(ring2, inv2, trees[maintree]);
+										if (*aborted == false)
 										{
-											if (*aborted == false)
+											if (computeSymmetryBeginEndInv(ring2, sms))
 											{
-												orderSymmetryMatchesInv(ring2, sms);
 												if (*aborted == false)
 												{
-													PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, result.quality);
-													if (*aborted == false && pointmatch != nullptr)
+													orderSymmetryMatchesInv(ring2, sms);
+													if (*aborted == false)
 													{
-														if (*aborted == false)
+														PointMatch *pointmatch = computeBestSymmetryInv(ring2, sms, result.quality);
+														if (*aborted == false && pointmatch != nullptr)
 														{
-															SRing symmetricalring = invertableSymmetry2Ring(ring2, inv2, pointmatch);
-															emit this->ring(new SRing(symmetricalring));
+															for (int i = 0; i < ring2.ring.n; i++)
+															{
+																if (trees[i].up != nullptr)
+																{
+																	SRing symmetricalring = invertableSymmetry2Ring(trees[i].base, trees[i].match, pointmatch);
+																	emit this->ring(new SRing(symmetricalring));
+																}
+															}
 														}
 													}
 												}
 											}
 										}
+										deleteSymmetryMatches(sms);
 									}
-									deleteSymmetryMatches(sms);
 								}
+								deleteFreeMatchingTrees(ring2, trees);
 							}
-							deleteFreeMatchingTree(tree);
+							else
+							{
+								deleteConstraint(constraint);
+								deleteMatching(ring2, inv2, lookup);
+							}
 						}
 						else
 						{

@@ -6,6 +6,7 @@
 #include <QSemaphore>
 
 #include "Ring.h"
+#include "Matching.h"
 
 struct PointMatch;
 
@@ -20,13 +21,19 @@ public:
 	void runAdjustInvSymmetry(SRing &match, SRing &matchout);
 	void clearAdjustInvSymmetry();
 
+	void setupFreeMatchingTrees(SRing2 &base, LookupT lookup, Constraint constraint, int capacity, QSemaphore *semaphore);
+	void loadFreeMatchingTrees(FreeMatchingTree *tree, int basei);
+	void runFreeMatchingTrees();
+	void clearFreeMatchingTrees();
+
 private:
 	volatile bool *aborted;
 
 	enum
 	{
 		jExit,
-		jAdjustInvSymmetry
+		jAdjustInvSymmetry,
+		jFreeMatchingTrees
 	} job;
 	QMutex runmutex;
 	QWaitCondition runwait;
@@ -37,7 +44,18 @@ private:
 
 	SRing match, matchout;
 
+	struct FreeMatchingTreeMagazin
+	{
+		FreeMatchingTree *tree;
+		int basei;
+	} *trees;
+
+	SRing2 base;
+	LookupT lookup;
+	Constraint constraint;
+
 	QSemaphore *semaphore;
 
 	void run() override;
+
 };

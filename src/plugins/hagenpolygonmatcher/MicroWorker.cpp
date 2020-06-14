@@ -45,6 +45,33 @@ void MicroWorker::clearAdjustInvSymmetry()
 	delete[] pointmatches;
 }
 
+void MicroWorker::setupFreeMatchingTrees(SRing2 &base, LookupT lookup, Constraint constraint, int capacity, QSemaphore *semaphore)
+{
+	this->base = base;
+	this->constraint = constraint;
+	this->lookup = lookup;
+	this->semaphore = semaphore;
+	trees = new FreeMatchingTreeMagazin[capacity];
+}
+
+void MicroWorker::loadFreeMatchingTrees(FreeMatchingTree *tree, int basei)
+{
+	trees[loadindex++] = { tree, basei };
+}
+
+void MicroWorker::runFreeMatchingTrees()
+{
+	runmutex.lock();
+	job = jFreeMatchingTrees;
+	runmutex.unlock();
+	runwait.wakeOne();
+}
+
+void MicroWorker::clearFreeMatchingTrees()
+{
+	delete[] trees;
+}
+
 void MicroWorker::run()
 {
 	runmutex.lock();
@@ -128,6 +155,60 @@ void MicroWorker::run()
 					matchout.ring[match.n - gate->rightback->base1 - 1] = pbasenew;
 
 				}*/
+			}
+			runmutex.lock();
+			semaphore->release(loadeds + 1);
+			break;
+		}
+		case jFreeMatchingTrees:
+		{
+			runmutex.unlock();
+			int loadeds = loadindex;
+			loadindex = 0;
+			for (int i = 0; i < loadeds; i++)
+			{
+				FreeMatchingTreeMagazin &mag = trees[i];
+				Matching *matching = nullptr, *opposite = nullptr;
+				double maxq = -DBL_MAX;
+				if (constraint[mag.basei] > -1 && *aborted == false)
+				{
+					for (int basej = 0; basej < base.ring.n; basej++)
+					{
+						if (constraint[basej] > -1 && basej != mag.basei)
+						{
+							Lookup &l1 = lookup[mag.basei][basej][constraint[mag.basei]];
+							int matchj = constraint[basej];
+							if (matchj < l1.begin) matchj += base.ring.n;
+							if (matchj <= l1.end)
+							{
+								Lookup &o1 = lookup[basej][mag.basei][constraint[basej]];
+								int matchi = constraint[mag.basei];
+								if (matchi < o1.begin) matchi += base.ring.n;
+								if (matchi <= o1.end)
+								{
+									Matching &matchingl = l1.matching[matchj - l1.begin];
+									Matching &oppositel = o1.matching[matchi - o1.begin];
+									double q = matchingl.quality + oppositel.quality + matchingl.cost + oppositel.cost;
+									if (q > maxq)
+									{
+										maxq = q;
+										matching = &matchingl;
+										opposite = &oppositel;
+									}
+								}
+							}
+						}
+					}
+				}
+				if (matching == nullptr)
+				{
+					mag.tree->up = nullptr;
+					mag.tree->down = nullptr;
+				}
+				else
+				{
+					*mag.tree = freeMatchingTree(matching, opposite);
+				}
 			}
 			runmutex.lock();
 			semaphore->release(loadeds + 1);

@@ -2,17 +2,18 @@
 
 #include "CoWorker.h"
 #include "SpecialWorker.h"
+#include "MircoWorker.h"
 
 #include <cfloat>
 
 inline MatchingResult initMatchingResult()
 {
-	return{ nullptr, nullptr, 0.0, -DBL_MAX, nullptr };
+	return{ nullptr, nullptr, 0.0, -DBL_MAX/*, nullptr*/ };
 }
 
 inline void deleteMatchingResult(MatchingResult &result)
 {
-	delete[] result.constraint;
+	//delete[] result.constraint;
 }
 
 /*O(n^6)*/
@@ -280,6 +281,30 @@ inline void deleteMatching(SRing2 &base, SRing2 &match, LookupT lookup)
 }
 */
 
+inline void createConstraintRec(Matching *m, Constraint constraint)
+{
+	constraint[m->base1] = m->match1;
+	if (m->rightback != nullptr)
+	{
+		createConstraintRec(m->rightback, constraint);
+		createConstraintRec(m->leftback, constraint);
+	}
+}
+
+inline Constraint createConstraint(SRing2 &base, MatchingResult &result)
+{
+	Constraint constraint = new int[base.ring.n];
+	memset(constraint, -1, sizeof(int) * base.ring.n);
+	createConstraintRec(result.matching, constraint);
+	createConstraintRec(result.opposite, constraint);
+	return constraint;
+}
+
+inline void deleteConstraint(Constraint constraint)
+{
+	delete[] constraint;
+}
+
 inline int privateCountMatchingTree(Matching *matching)
 {
 	if (matching->rightback == nullptr) return 1;
@@ -428,4 +453,66 @@ inline void deleteFreeMatchingTree(FreeMatchingTree &tree)
 {
 	delete[] tree.up;
 	delete[] tree.down;
+	deleteSRing2(tree.base);
+	deleteSRing2(tree.match);
+}
+
+inline FreeMatchingTrees createFreeMatchingTrees(SRing2 &base, LookupT lookup, Constraint constraint, int nworker, MicroWorker **microworker, QSemaphore *semaphore, volatile bool &aborted)
+{
+	FreeMatchingTrees trees = new FreeMatchingTree[base.ring.n];
+
+	for (int iw = 0; iw < nworker; iw++)
+	{
+		microworker[iw]->setupFreeMatchingTrees(base, lookup, constraint, (base.ring.n / nworker) + 1, semaphore);
+	}
+
+	if (aborted == false)
+	{
+		int currentworker = 0;
+		for (int i = 0; i < base.ring.n; i++)
+		{
+			microworker[currentworker]->loadFreeMatchingTrees(&trees[i], i);
+			currentworker = (currentworker + 1) % nworker;
+		}
+		for (int worker = 0; worker < nworker; worker++)
+		{
+			microworker[worker]->runFreeMatchingTrees();
+		}
+		semaphore->acquire(base.ring.n + nworker);
+	}
+
+	for (int worker = 0; worker < nworker; worker++)
+	{
+		microworker[worker]->clearFreeMatchingTrees();
+	}
+
+	return trees;
+}
+
+inline void adjustFreeMatchingTrees(SRing2 &base, SRing2 &match, FreeMatchingTrees &trees)
+{
+	for (int i = 0; i < base.ring.n; i++)
+	{
+		FreeMatchingTree &tree = trees[i];
+		if (tree.up == nullptr)
+		{
+			tree.base.ring.ring = nullptr;
+			tree.match.ring.ring = nullptr;
+		}
+		else
+		{
+			tree.base = cloneSRing2(base);
+			tree.match = cloneSRing2(match);
+			adjustFreeMatchingTree(tree.base, tree.match, tree);
+		}
+	}
+}
+
+inline void deleteFreeMatchingTrees(SRing2 &base, FreeMatchingTrees trees)
+{
+	for (int i = 0; i < base.ring.n; i++)
+	{
+		deleteFreeMatchingTree(trees[i]);
+	}
+	delete[] trees;
 }
