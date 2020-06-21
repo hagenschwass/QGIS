@@ -31,6 +31,7 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 		for (int i = 0; i < match->ring.n; i++)
 		{
 			tempmatching[i].quality = 0.0;
+			tempmatching[i].maxquality = 0.0;
 			tempmatching[i].base1 = basei;
 			tempmatching[i].leftback = nullptr;
 			tempmatching[i].rightback = nullptr;
@@ -739,10 +740,12 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 }
 
 //min: .333333333333
-#define RELUCTANCE		.333333333333333
+#define RELUCTANCE		.2
 
 //min: 6.
 #define STAGNATION		7.
+
+#define SLOPE			1.
 
 void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup)
 {
@@ -791,6 +794,11 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 
 							Matching &right = lookupright.matching[matchindexright - lookupright.begin];
 							Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
+
+							if (basepeek % base->ring.n == base->ring.n - (matchpeek % match->ring.n) - 1)
+							{
+								if (right.cost + left.cost < -1e-13) continue;
+							}
 
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
 							double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
@@ -846,11 +854,13 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							double quality = (vertmin + (RELUCTANCE * vertmax)) / (1.0 + RELUCTANCE) * (hormin + (RELUCTANCE * hormax)) / (1.0 + RELUCTANCE);
 							//double quality = vertmin * hormin * 2.;
 
+							double maxq = std::max(left.maxquality, right.maxquality);
+							if (quality < maxq * SLOPE) continue;
+
 							double inq = left.quality + right.quality;
+							//if (inq / quality > STAGNATION) continue;
 
-							if (inq / quality > STAGNATION) continue;
-
-							//double cost = baselength * basehabs + matchlength * matchhabs;
+							//double cost = std::max(baselength * basehabs, matchlength * matchhabs);
 							double cost = vertmax * hormax;
 							double incost = left.cost + right.cost;
 
@@ -859,6 +869,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							{
 								gate.quality = quality + inq;
 								gate.cost = incost - cost;
+								gate.maxquality = std::max(maxq, quality);
 								gate.leftback = &left;
 								gate.rightback = &right;
 							}

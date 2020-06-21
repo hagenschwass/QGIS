@@ -453,8 +453,8 @@ inline void deleteFreeMatchingTree(FreeMatchingTree &tree)
 {
 	delete[] tree.up;
 	delete[] tree.down;
-	deleteSRing2(tree.base);
-	deleteSRing2(tree.match);
+	//deleteSRing2(tree.base);
+	//deleteSRing2(tree.match);
 }
 
 inline FreeMatchingTrees createFreeMatchingTrees(SRing2 &base, LookupT lookup, Constraint constraint, int nworker, MicroWorker **microworker, QSemaphore *semaphore, volatile bool &aborted)
@@ -496,14 +496,14 @@ inline void adjustFreeMatchingTrees(SRing2 &base, SRing2 &match, FreeMatchingTre
 		FreeMatchingTree &tree = trees[i];
 		if (tree.up == nullptr)
 		{
-			tree.base.ring.ring = nullptr;
-			tree.match.ring.ring = nullptr;
+			//tree.base.ring.ring = nullptr;
+			//tree.match.ring.ring = nullptr;
 		}
 		else
 		{
-			tree.base = cloneSRing2(base);
-			tree.match = cloneSRing2(match);
-			adjustFreeMatchingTree(tree.base, tree.match, tree);
+			//tree.base = cloneSRing2(base);
+			//tree.match = cloneSRing2(match);
+			//adjustFreeMatchingTree(tree.base, tree.match, tree);
 		}
 	}
 }

@@ -12,7 +12,7 @@ class QSemaphore;
 struct Matching
 {
 	int base1, /*base2, */match1/*, match2*/;
-	double quality, cost;// , exitcost;
+	double quality, cost, maxquality;// , exitcost;
 	Matching *leftback, *rightback;
 };
 
@@ -37,7 +37,7 @@ struct FreeMatchingTree
 {
 	FreeMatching *up, *down;
 	int upcount, downcount;
-	SRing2 base, match;
+	//SRing2 base, match;
 };
 
 typedef FreeMatchingTree* FreeMatchingTrees;

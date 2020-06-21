@@ -179,12 +179,12 @@ void MicroWorker::run()
 							Lookup &l1 = lookup[mag.basei][basej][constraint[mag.basei]];
 							int matchj = constraint[basej];
 							if (matchj < l1.begin) matchj += base.ring.n;
-							if (matchj <= l1.end)
+							if (matchj >= l1.begin && matchj <= l1.end)
 							{
 								Lookup &o1 = lookup[basej][mag.basei][constraint[basej]];
 								int matchi = constraint[mag.basei];
 								if (matchi < o1.begin) matchi += base.ring.n;
-								if (matchi <= o1.end)
+								if (matchi >= o1.begin && matchi <= o1.end)
 								{
 									Matching &matchingl = l1.matching[matchj - l1.begin];
 									Matching &oppositel = o1.matching[matchi - o1.begin];
