@@ -747,6 +747,35 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 
 #define SLOPE			1.
 
+#define MINANGLE		1.5
+
+inline Matching* CoWorkerleftedge(Matching *right)
+{
+	if (right->leftback != nullptr)
+	{
+		for (Matching *rightleftback = right->leftback; ; right = rightleftback, rightleftback = rightleftback->leftback)
+		{
+			if (rightleftback->leftback == nullptr)
+			{
+				return right->rightback;
+			}
+		}
+	}
+	return nullptr;
+}
+
+inline Matching* CoWorkerrightedge(Matching *left)
+{
+	for (Matching *leftedge = left; ; leftedge = leftedge->rightback)
+	{
+		if (leftedge->rightback == nullptr)
+		{
+			return leftedge;
+		}
+	}
+	return nullptr;
+}
+
 void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup)
 {
 
@@ -797,7 +826,33 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 
 							if (basepeek % base->ring.n == base->ring.n - (matchpeek % match->ring.n) - 1)
 							{
-								if (right.cost + left.cost < -1e-13) continue;
+								{
+									Matching *rightedge = CoWorkerleftedge(&right);
+									if (rightedge == nullptr)
+									{
+										Point &basewing = pbasej, &matchwing = pmatchj;
+										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
+										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+										double delta = abs(atan2basewing - atan2matchwing);
+										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+									}
+									else
+									{
+										Point &basewing = base->ring.ring[rightedge->base1], &matchwing = match->ring.ring[rightedge->match1];
+										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
+										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+										double delta = abs(atan2basewing - atan2matchwing);
+										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+									}
+								}
+								{
+									Matching *leftedge = CoWorkerrightedge(&left);
+									Point &basewing = base->ring.ring[leftedge->base1], &matchwing = match->ring.ring[leftedge->match1];
+									double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
+									double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+									double delta = abs(atan2basewing - atan2matchwing);
+									if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+								}
 							}
 
 							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];

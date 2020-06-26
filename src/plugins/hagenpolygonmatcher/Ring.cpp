@@ -2,6 +2,9 @@
 
 #include "qgspointxy.h"
 
+double H_PI = cos(-1);
+double H_2_PI = 2. * H_PI;
+
 inline Point operator*(const double &d, const Point &p)
 {
 	return{ d * p.x, d * p.y };

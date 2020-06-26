@@ -4,6 +4,9 @@
 
 #include "qgsgeometry.h"
 
+extern double H_PI;
+extern double H_2_PI;
+
 struct Point
 {
 	double x, y;
