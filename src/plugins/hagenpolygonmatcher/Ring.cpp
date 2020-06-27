@@ -2,7 +2,7 @@
 
 #include "qgspointxy.h"
 
-double H_PI = cos(-1);
+double H_PI = acos(-1);
 double H_2_PI = 2. * H_PI;
 
 inline Point operator*(const double &d, const Point &p)
@@ -26,7 +26,9 @@ inline Matrix operator >> (const Point &from, const Point &to)
 	double xsq = x * x, ysq = y * y;
 	double a11 = (_x * x + _y * y) / (xsq + ysq);
 	double a21 = (_y * x - _x * y) / (xsq + ysq);
-	return Matrix{ { {a11, ((_x - a11 * x) / y)}, {a21, ((_y - a21 * x) / y)} } };
+	if (abs(x) < abs(y))
+		return Matrix{ { {a11, ((_x - a11 * x) / y)}, {a21, ((_y - a21 * x) / y)} } };
+	return Matrix{ { {a11, ((a11 * y - _y) / x)}, {a21, ((_x + a21 * y) / x)} } };
 }
 
 inline Point operator*(const Matrix &m, const Point &p)

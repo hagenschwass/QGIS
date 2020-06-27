@@ -16,6 +16,30 @@ SpecialWorker::~SpecialWorker()
 	thread.wait();
 }
 
+inline Matching* SpecialWorkergettopmatching(Matching *top)
+{
+	if (top->leftback != nullptr)
+	{
+		for (Matching *topleftback = top->leftback;; top = topleftback, topleftback = top->leftback)
+		{
+			if (topleftback->leftback == nullptr)
+			{
+				return top->rightback;
+			}
+		}
+	}
+	return nullptr;
+}
+
+inline Matching* SpecialWorkergetbottommatching(Matching *bottom)
+{
+	for (;; bottom = bottom->rightback)
+	{
+		if (bottom->rightback == nullptr) return bottom;
+	}
+	return nullptr;
+}
+
 /**/
 void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, MatchingResult *result)
 {
@@ -65,6 +89,75 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 				}
 
 				Matching &matchingl = lookupmatch.matching[matchj - lookupmatch.begin];
+				/**/
+				if (basei == match->ring.n - (matchi % match->ring.n) - 1)
+				{
+					Point &peak = base->ring.ring[basei];
+					{
+						Matching *top = SpecialWorkergettopmatching(&matchingl);
+						if (top == nullptr)
+						{
+							Point &basewing = base->ring.ring[opposite->base1], &matchwing = match->ring.ring[opposite->match1];
+							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double delta = abs(atan2basewing - atan2matchwing);
+							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+								continue;
+						}
+						else
+						{
+							Point &basewing = base->ring.ring[top->base1], &matchwing = match->ring.ring[top->match1];
+							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double delta = abs(atan2basewing - atan2matchwing);
+							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+								continue;
+						}
+					}
+					{
+						Matching *bottom = SpecialWorkergetbottommatching(opposite);
+						Point &basewing = base->ring.ring[bottom->base1], &matchwing = match->ring.ring[bottom->match1];
+						double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+						double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+						double delta = abs(atan2basewing - atan2matchwing);
+						if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+							continue;
+					}
+				}
+				if (opposite->base1 == match->ring.n - (opposite->match1) - 1)
+				{
+					Point &peak = base->ring.ring[opposite->base1];
+					{
+						Matching *top = SpecialWorkergettopmatching(opposite);
+						if (top == nullptr)
+						{
+							Point &basewing = base->ring.ring[matchingl.base1], &matchwing = match->ring.ring[matchingl.match1];
+							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double delta = abs(atan2basewing - atan2matchwing);
+							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+								continue;
+						}
+						else
+						{
+							Point &basewing = base->ring.ring[top->base1], &matchwing = match->ring.ring[top->match1];
+							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double delta = abs(atan2basewing - atan2matchwing);
+							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+								continue;
+						}
+					}
+					{
+						Matching *bottom = SpecialWorkergetbottommatching(&matchingl);
+						Point &basewing = base->ring.ring[bottom->base1], &matchwing = match->ring.ring[bottom->match1];
+						double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
+						double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+						double delta = abs(atan2basewing - atan2matchwing);
+						if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+							continue;
+					}
+				}
 
 				double qualityl = matchingl.quality + opposite->quality;
 				double costl = matchingl.cost + opposite->cost;

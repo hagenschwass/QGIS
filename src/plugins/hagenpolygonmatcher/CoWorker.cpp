@@ -747,8 +747,6 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 
 #define SLOPE			1.
 
-#define MINANGLE		1.5
-
 inline Matching* CoWorkerleftedge(Matching *right)
 {
 	if (right->leftback != nullptr)
@@ -834,7 +832,8 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
 										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
 										double delta = abs(atan2basewing - atan2matchwing);
-										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+											continue;
 									}
 									else
 									{
@@ -842,7 +841,8 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
 										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
 										double delta = abs(atan2basewing - atan2matchwing);
-										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+											continue;
 									}
 								}
 								{
@@ -851,7 +851,8 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 									double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
 									double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
 									double delta = abs(atan2basewing - atan2matchwing);
-									if (delta < MINANGLE || delta > H_2_PI - MINANGLE) continue;
+									if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
+										continue;
 								}
 							}
 

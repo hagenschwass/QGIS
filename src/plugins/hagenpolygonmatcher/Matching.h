@@ -1,5 +1,7 @@
 #pragma once
 
+#define MINANGLE		1.5
+
 typedef int ConstraintArg;
 typedef ConstraintArg* Constraint;
 
