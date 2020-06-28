@@ -7,6 +7,12 @@
 extern double H_PI;
 extern double H_2_PI;
 
+typedef double* FuncsArg;
+typedef FuncsArg* Funcs;
+
+extern inline Funcs createFuncs(int n);
+extern inline void deleteFuncs(Funcs funcs, int n);
+
 struct Point
 {
 	double x, y;

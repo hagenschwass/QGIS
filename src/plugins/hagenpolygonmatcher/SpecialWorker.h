@@ -14,9 +14,9 @@ public:
 	SpecialWorker(QSemaphore *semaphore, volatile bool *aborted);
 	~SpecialWorker() override;
 signals:
-	void searchbestmatch(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, MatchingResult*);
+	void searchbestmatch(int basecut, SRing2 *base, SRing2 *match, FuncsArg *atans, LookupArg *lookup, MatchingResult*);
 private slots:
-	void searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, MatchingResult *result);
+	void searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, FuncsArg *atans, LookupArg *lookup, MatchingResult *result);
 private:
 	QThread thread;
 	QSemaphore *semaphore;

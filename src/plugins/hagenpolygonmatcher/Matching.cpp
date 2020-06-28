@@ -103,6 +103,22 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 		return lookup;
 	}
 
+	Funcs sqrts = createFuncs(base.ring.n);
+	workers[currentworker]->computesqrts(&base, sqrts);
+	currentworker = (currentworker + 1) % nworkers;
+	Funcs atans = createFuncs(base.ring.n);
+	workers[currentworker]->computeatans(&base, atans);
+	currentworker = (currentworker + 1) % nworkers;
+
+	semaphore->acquire(2);
+
+	if (aborted)
+	{
+		deleteFuncs(sqrts, base.ring.n);
+		deleteFuncs(atans, base.ring.n);
+		return lookup;
+	}
+
 	int specialworkerstartedcount = 0;
 	for (int basecut = 2; basecut < base.ring.n; basecut++)
 	{
@@ -111,7 +127,7 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 		for (int basei = 0; basei < base.ring.n; basei++)
 		{
 
-			workers[currentworker]->matchinv(basei, basecut, &base, &match, lookup);
+			workers[currentworker]->matchinv(basei, basecut, &base, &match, sqrts, atans, lookup);
 			currentworker = (currentworker + 1) % nworkers;
 
 
@@ -134,13 +150,17 @@ inline LookupT computeInvMatching(SRing2 &base, SRing2 &match, double skiparea, 
 
 		if (2 * basecut >= base.ring.n)
 		{
-			specialworker->searchbestmatch(basecut, &base, &match, lookup, &result);
+			specialworker->searchbestmatch(basecut, &base, &match, atans, lookup, &result);
 			specialworkerstartedcount++;
 		}
 
 	}//basecut
 
+	deleteFuncs(sqrts, base.ring.n);
+
 	specialsemaphore->acquire(specialworkerstartedcount);
+
+	deleteFuncs(atans, base.ring.n);
 
 	return lookup;
 }

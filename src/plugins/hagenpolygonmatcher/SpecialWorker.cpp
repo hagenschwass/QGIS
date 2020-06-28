@@ -5,7 +5,7 @@ SpecialWorker::SpecialWorker(QSemaphore *semaphore, volatile bool *aborted) :
 	aborted(aborted)
 {
 	moveToThread(&thread);
-	connect(this, SIGNAL(searchbestmatch(int, SRing2 *, SRing2 *, LookupArg *, MatchingResult*)), this, SLOT(searchbestmatchslot(int, SRing2 *, SRing2 *, LookupArg *, MatchingResult*)));
+	connect(this, SIGNAL(searchbestmatch(int, SRing2 *, SRing2 *, FuncsArg *, LookupArg *, MatchingResult*)), this, SLOT(searchbestmatchslot(int, SRing2 *, SRing2 *, FuncsArg *, LookupArg *, MatchingResult*)));
 	thread.start();
 	thread.setPriority(QThread::Priority::LowPriority);
 }
@@ -41,7 +41,7 @@ inline Matching* SpecialWorkergetbottommatching(Matching *bottom)
 }
 
 /**/
-void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup, MatchingResult *result)
+void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match, FuncsArg *atans, LookupArg *lookup, MatchingResult *result)
 {
 	for (int basei = 0; basei < base->ring.n; basei++)
 	{
@@ -92,23 +92,20 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 				/**/
 				if (basei == match->ring.n - (matchi % match->ring.n) - 1)
 				{
-					Point &peak = base->ring.ring[basei];
 					{
 						Matching *top = SpecialWorkergettopmatching(&matchingl);
 						if (top == nullptr)
 						{
-							Point &basewing = base->ring.ring[opposite->base1], &matchwing = match->ring.ring[opposite->match1];
-							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double atan2basewing = atans[basei][opposite->base1];
+							double atan2matchwing = atans[basei][match->ring.n - opposite->match1 - 1];
 							double delta = abs(atan2basewing - atan2matchwing);
 							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 								continue;
 						}
 						else
 						{
-							Point &basewing = base->ring.ring[top->base1], &matchwing = match->ring.ring[top->match1];
-							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double atan2basewing = atans[basei][top->base1];
+							double atan2matchwing = atans[basei][match->ring.n - top->match1 - 1];
 							double delta = abs(atan2basewing - atan2matchwing);
 							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 								continue;
@@ -116,9 +113,8 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 					}
 					{
 						Matching *bottom = SpecialWorkergetbottommatching(opposite);
-						Point &basewing = base->ring.ring[bottom->base1], &matchwing = match->ring.ring[bottom->match1];
-						double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-						double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+						double atan2basewing = atans[basei][bottom->base1];
+						double atan2matchwing = atans[basei][match->ring.n - bottom->match1 - 1];
 						double delta = abs(atan2basewing - atan2matchwing);
 						if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 							continue;
@@ -131,18 +127,16 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 						Matching *top = SpecialWorkergettopmatching(opposite);
 						if (top == nullptr)
 						{
-							Point &basewing = base->ring.ring[matchingl.base1], &matchwing = match->ring.ring[matchingl.match1];
-							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double atan2basewing = atans[opposite->base1][matchingl.base1];
+							double atan2matchwing = atans[opposite->base1][match->ring.n - matchingl.match1 - 1];
 							double delta = abs(atan2basewing - atan2matchwing);
 							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 								continue;
 						}
 						else
 						{
-							Point &basewing = base->ring.ring[top->base1], &matchwing = match->ring.ring[top->match1];
-							double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-							double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+							double atan2basewing = atans[opposite->base1][top->base1];
+							double atan2matchwing = atans[opposite->base1][match->ring.n - top->match1 - 1];
 							double delta = abs(atan2basewing - atan2matchwing);
 							if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 								continue;
@@ -150,9 +144,8 @@ void SpecialWorker::searchbestmatchslot(int basecut, SRing2 *base, SRing2 *match
 					}
 					{
 						Matching *bottom = SpecialWorkergetbottommatching(&matchingl);
-						Point &basewing = base->ring.ring[bottom->base1], &matchwing = match->ring.ring[bottom->match1];
-						double atan2basewing = atan2(basewing.x - peak.x, basewing.y - peak.y);
-						double atan2matchwing = atan2(matchwing.x - peak.x, matchwing.y - peak.y);
+						double atan2basewing = atans[opposite->base1][bottom->base1];
+						double atan2matchwing = atans[opposite->base1][match->ring.n - bottom->match1 - 1];
 						double delta = abs(atan2basewing - atan2matchwing);
 						if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 							continue;

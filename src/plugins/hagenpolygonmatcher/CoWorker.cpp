@@ -6,12 +6,14 @@ CoWorker::CoWorker(QSemaphore *semaphore, volatile bool *aborted) :
 	aborted(aborted)
 {
 	moveToThread(&thread);
+	connect(this, SIGNAL(computesqrts(SRing2 *, FuncsArg *)), this, SLOT(computesqrtsslot(SRing2 *, FuncsArg *)));
+	connect(this, SIGNAL(computeatans(SRing2 *, FuncsArg *)), this, SLOT(computeatansslot(SRing2 *, FuncsArg *)));
 	connect(this, SIGNAL(initlookupinvforbase(int, SRing2 *, SRing2 *, LookupArg *, double)), this, SLOT(initlookupinvforbaseslot(int, SRing2 *, SRing2 *, LookupArg *, double)));
 	connect(this, SIGNAL(initshortcutsforbase(int, SRing2 *, SRing2 *, LookupArg *)), this, SLOT(initshortcutsforbaseslot(int, SRing2 *, SRing2 *, LookupArg *)));
 	connect(this, SIGNAL(initshortcutsformatch(int, SRing2 *, SRing2 *, LookupArg *)), this, SLOT(initshortcutsformatchslot(int, SRing2 *, SRing2 *, LookupArg *)));
 	connect(this, SIGNAL(computeshortcutsinv(int, int, SRing2 *, SRing2 *, LookupArg *)), this, SLOT(computeshortcutsinvslot(int, int, SRing2 *, SRing2 *, LookupArg *)));
 	connect(this, SIGNAL(updateexitcosts(int , SRing2 *, SRing2 *, LookupArg *)), this, SLOT(updateexitcostsslot(int , SRing2 *, SRing2 *, LookupArg *)));
-	connect(this, SIGNAL(matchinv(/**/int , int , SRing2 *, SRing2 *, LookupArg *)), this, SLOT(matchinvslot(/**/int , int , SRing2 *, SRing2 *, LookupArg *)));
+	connect(this, SIGNAL(matchinv(/**/int , int , SRing2 *, SRing2 *, FuncsArg *, FuncsArg *, LookupArg *)), this, SLOT(matchinvslot(/**/int , int , SRing2 *, SRing2 *, FuncsArg *, FuncsArg *, LookupArg *)));
 	connect(this, SIGNAL(findbestgate(int, int, SRing2 *, SRing2 *, ConstraintArg*, LookupArg *, Matching**)), this, SLOT(findbestgateslot(int, int, SRing2 *, SRing2 *, ConstraintArg*, LookupArg *, Matching**)));
 	thread.start();
 }
@@ -20,6 +22,40 @@ CoWorker::~CoWorker()
 {
 	thread.exit();
 	thread.wait();
+}
+
+void CoWorker::computesqrtsslot(SRing2 *base, FuncsArg *sqrts)
+{
+	for (int i = 0; i < base->ring.n; i++)
+	{
+		sqrts[i][i] = 0.;
+		Point &p1 = base->ring.ring[i];
+		for (int j = i + 1; j < base->ring.n; j++)
+		{
+			Point &p2 = base->ring.ring[j];
+			double dx = p1.x - p2.x, dy = p1.y - p2.y;
+			sqrts[i][j] = sqrt(dx * dx + dy * dy);
+			sqrts[j][i] = sqrts[i][j];
+		}
+	}
+	semaphore->release();
+}
+
+void CoWorker::computeatansslot(SRing2 *base, FuncsArg *atans)
+{
+	for (int i = 0; i < base->ring.n; i++)
+	{
+		atans[i][i] = 0.;
+		Point &p1 = base->ring.ring[i];
+		for (int j = i + 1; j < base->ring.n; j++)
+		{
+			Point &p2 = base->ring.ring[j];
+			double dx = p2.x - p1.x, dy = p2.y - p1.y;
+			atans[i][j] = atan2(dx, dy);
+			atans[j][i] = atans[i][j] > 0. ? atans[i][j] - H_PI : atans[i][j] + H_PI;
+		}
+	}
+	semaphore->release();
 }
 
 /**/
@@ -257,12 +293,12 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 					double matchsq = matchdx * matchdx + matchdy * matchdy;
 					double &quality = tempmatching[matchk - matchi - 1].quality;
 					quality = 0.0;
-					for (int matchpeek = matchi + 1; matchpeek < matchk; matchpeek++)
+					for (int matchpeak = matchi + 1; matchpeak < matchk; matchpeak++)
 					{
-						Point &matchpeekp = match->ring.ring[matchpeek % match->ring.n];
-						double matchleftdx = matchpeekp.x - matchp1.x, matchleftdy = matchpeekp.y - matchp1.y;
+						Point &matchpeakp = match->ring.ring[matchpeak % match->ring.n];
+						double matchleftdx = matchpeakp.x - matchp1.x, matchleftdy = matchpeakp.y - matchp1.y;
 						double matchleftsq = matchleftdx * matchleftdx + matchleftdy * matchleftdy;
-						double matchrightdx = matchp3.x - matchpeekp.x, matchrightdy = matchp3.y - matchpeekp.y;
+						double matchrightdx = matchp3.x - matchpeakp.x, matchrightdy = matchp3.y - matchpeakp.y;
 						double matchrightsq = matchrightdx * matchrightdx + matchrightdy * matchrightdy;
 						double cost = -2.0 * (matchleftsq + matchrightsq);
 						if (cost < quality) quality = cost;
@@ -316,12 +352,12 @@ void CoWorker::initlookupinvforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 					double matchsq = matchdx * matchdx + matchdy * matchdy;
 					double &quality = tempmatching[0].quality;
 					quality = 0.0;
-					for (int basepeek = basei + 1; basepeek < basek; basepeek++)
+					for (int basepeak = basei + 1; basepeak < basek; basepeak++)
 					{
-						Point &basepeekp = base->ring.ring[basepeek % base->ring.n];
-						double baseleftdx = basepeekp.x - basep1.x, baseleftdy = basepeekp.y - basep1.y;
+						Point &basepeakp = base->ring.ring[basepeak % base->ring.n];
+						double baseleftdx = basepeakp.x - basep1.x, baseleftdy = basepeakp.y - basep1.y;
 						double baseleftsq = baseleftdx * baseleftdx + baseleftdy * baseleftdy;
-						double baserightdx = basep3.x - basepeekp.x, baserightdy = basep3.y - basepeekp.y;
+						double baserightdx = basep3.x - basepeakp.x, baserightdy = basep3.y - basepeakp.y;
 						double baserightsq = baserightdx * baserightdx + baserightdy * baserightdy;
 						double cost = -2.0 * (baseleftsq + baserightsq);
 						if (cost < quality) quality = cost;
@@ -439,28 +475,28 @@ void CoWorker::computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRi
 			double &quality = gate.cost;
 			quality = -DBL_MAX;
 
-			for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
+			for (int basepeak = basei + 1; basepeak < basei + basecut; basepeak++)
 			{
-				Point &pbasepeek = base->ring.ring[basepeek % base->ring.n];
-				double &basep1x = pbasei.x, &basep1y = pbasei.y, &basep2x = pbasepeek.x, &basep2y = pbasepeek.y, &basep3x = pbasej.x, &basep3y = pbasej.y;
+				Point &pbasepeak = base->ring.ring[basepeak % base->ring.n];
+				double &basep1x = pbasei.x, &basep1y = pbasei.y, &basep2x = pbasepeak.x, &basep2y = pbasepeak.y, &basep3x = pbasej.x, &basep3y = pbasej.y;
 				double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
 				double basearealabs = abs(basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x);
 
 
-				Lookup &lookupleft = lookup[basei][basepeek % base->ring.n][matchi];
-				int matchpeekend = std::min(lookupleft.end, matchi + matchcut - 1);
-				for (int matchpeek = lookupleft.begin; matchpeek <= matchpeekend; matchpeek++)
+				Lookup &lookupleft = lookup[basei][basepeak % base->ring.n][matchi];
+				int matchpeakend = std::min(lookupleft.end, matchi + matchcut - 1);
+				for (int matchpeak = lookupleft.begin; matchpeak <= matchpeakend; matchpeak++)
 				{
-					Lookup &lookupright = lookup[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchpeek % match->ring.n];
-					int matchindexright = matchpeek >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
+					Lookup &lookupright = lookup[basepeak % base->ring.n][(basei + basecut) % base->ring.n][matchpeak % match->ring.n];
+					int matchindexright = matchpeak >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
 					if (matchindexright < lookupright.begin || matchindexright > lookupright.end) continue;
 
 
 					Matching &right = lookupright.matching[matchindexright - lookupright.begin];
-					Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
+					Matching &left = lookupleft.matching[matchpeak - lookupleft.begin];
 
-					Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
-					double &matchp1x = pmatchi.x, &matchp1y = pmatchi.y, &matchp2x = pmatchpeek.x, &matchp2y = pmatchpeek.y, &matchp3x = pmatchj.x, &matchp3y = pmatchj.y;
+					Point &pmatchpeak = match->ring.ring[matchpeak % match->ring.n];
+					double &matchp1x = pmatchi.x, &matchp1y = pmatchi.y, &matchp2x = pmatchpeak.x, &matchp2y = pmatchpeak.y, &matchp3x = pmatchj.x, &matchp3y = pmatchj.y;
 					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
 					double matchareal = matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x;
 
@@ -475,14 +511,14 @@ void CoWorker::computeshortcutsinvslot(int basei, int basecut, SRing2 *base, SRi
 					{
 						break;
 					}
-				}//matchpeek
+				}//matchpeak
 
 
 				if (*aborted)
 				{
 					break;
 				}
-			}//basepeek
+			}//basepeak
 
 			if (*aborted)
 			{
@@ -521,11 +557,11 @@ void CoWorker::initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 				double &quality = gate.cost;
 				quality = -DBL_MAX;
 
-				for (int matchpeek = matchi + 1; matchpeek < matchj; matchpeek++)
+				for (int matchpeak = matchi + 1; matchpeak < matchj; matchpeak++)
 				{
-					Lookup &lookupmatchright = lookupbase[matchpeek % match->ring.n];
+					Lookup &lookupmatchright = lookupbase[matchpeak % match->ring.n];
 					int iright;
-					if (matchpeek < match->ring.n)
+					if (matchpeak < match->ring.n)
 					{
 						if (matchj < lookupmatchright.begin || matchj > lookupmatchright.end) continue;
 						iright = matchj;
@@ -538,9 +574,9 @@ void CoWorker::initshortcutsforbaseslot(int basei, SRing2 *base, SRing2 *match, 
 					}
 
 					Matching &right = lookupmatchright.matching[iright - lookupmatchright.begin];
-					Matching &left = lookupmatch.matching[matchpeek - lookupmatch.begin];
+					Matching &left = lookupmatch.matching[matchpeak - lookupmatch.begin];
 
-					Point &matchp2 = match->ring.ring[matchpeek % match->ring.n];
+					Point &matchp2 = match->ring.ring[matchpeak % match->ring.n];
 					double &matchp1x = matchp1.x, &matchp1y = matchp1.y, &matchp2x = matchp2.x, &matchp2y = matchp2.y, &matchp3x = matchp3.x, &matchp3y = matchp3.y;
 					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
 					double matchareal = matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x;
@@ -585,18 +621,18 @@ void CoWorker::initshortcutsformatchslot(int matchi, SRing2 *base, SRing2 *match
 				double &quality = gate.cost;
 				quality = -DBL_MAX;
 
-				for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
+				for (int basepeak = basei + 1; basepeak < basei + basecut; basepeak++)
 				{
-					Lookup &lookupleft = lookup[basei][basepeek % base->ring.n][matchi];
+					Lookup &lookupleft = lookup[basei][basepeak % base->ring.n][matchi];
 					if (lookupleft.begin > matchj || lookupleft.end < matchj) continue;
 
-					Lookup &lookupright = lookup[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchi];
+					Lookup &lookupright = lookup[basepeak % base->ring.n][(basei + basecut) % base->ring.n][matchi];
 					if (lookupright.begin > matchj || lookupleft.end < matchj) continue;
 
 					Matching &left = lookupleft.matching[matchj - lookupleft.begin];
 					Matching &right = lookupright.matching[matchj - lookupright.begin];
 
-					Point &basep2 = base->ring.ring[basepeek % base->ring.n];
+					Point &basep2 = base->ring.ring[basepeak % base->ring.n];
 					double &basep1x = basep1.x, &basep1y = basep1.y, &basep2x = basep2.x, &basep2y = basep2.y, &basep3x = basep3.x, &basep3y = basep3.y;
 					double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
 					double baseareal = basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x;
@@ -653,12 +689,12 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 					//double &exitcost = matching.exitcost;
 					//exitcost = 0.0;
 
-					for (int matchpeek = matchi + 1; matchpeek < matchj; matchpeek++)
+					for (int matchpeak = matchi + 1; matchpeak < matchj; matchpeak++)
 					{
-						Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
-						double matchleftdx = pmatchpeek.x - pmatchi.x, matchleftdy = pmatchpeek.y - pmatchi.y;
+						Point &pmatchpeak = match->ring.ring[matchpeak % match->ring.n];
+						double matchleftdx = pmatchpeak.x - pmatchi.x, matchleftdy = pmatchpeak.y - pmatchi.y;
 						double matchleftsq = matchleftdx * matchleftdx + matchleftdy * matchleftdy;
-						double matchrightdx = pmatchj.x - pmatchpeek.x, matchrightdy = pmatchj.y - pmatchpeek.y;
+						double matchrightdx = pmatchj.x - pmatchpeak.x, matchrightdy = pmatchj.y - pmatchpeak.y;
 						double matchrightsq = matchrightdx * matchrightdx + matchrightdy * matchrightdy;
 						double cost = -2.0 * (matchleftsq + matchrightsq);
 						//if (cost < exitcost) exitcost = cost;
@@ -705,17 +741,17 @@ void CoWorker::updateexitcostsslot(int basei, SRing2 *base, SRing2 *match, Looku
 					//double &exitcost = matching.exitcost;
 					//exitcost = 0.0;
 
-					for (int basepeek = basej + 1; basepeek < base->ring.n + basei - 1; basepeek++)
+					for (int basepeak = basej + 1; basepeak < base->ring.n + basei - 1; basepeak++)
 					{
-						Point &pbasepeek = base->ring.ring[basepeek % base->ring.n];
-						double baseleftdx = pbasepeek.x - pbasej.x, baseleftdy = pbasepeek.y - pbasej.y;
+						Point &pbasepeak = base->ring.ring[basepeak % base->ring.n];
+						double baseleftdx = pbasepeak.x - pbasej.x, baseleftdy = pbasepeak.y - pbasej.y;
 						double baseleftsq = baseleftdx * baseleftdx + baseleftdy * baseleftdy;
-						double baserightdx = pbasei.y - pbasepeek.x, baserightdy = pbasei.y - pbasepeek.y;
+						double baserightdx = pbasei.y - pbasepeak.x, baserightdy = pbasei.y - pbasepeak.y;
 						double baserightsq = baserightdx * baserightdx + baserightdy * baserightdy;
 						double basecost = -2.0 * (baseleftsq + baserightsq);
 						//if (basecost < exitcost) exitcost = basecost;
 
-					}//basepeek
+					}//basepeak
 
 					//exitcost += basesq < matchsq ? basesq - matchsq : matchsq - basesq;
 
@@ -774,22 +810,22 @@ inline Matching* CoWorkerrightedge(Matching *left)
 	return nullptr;
 }
 
-void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, LookupArg *lookup)
+void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *match, FuncsArg *sqrts, FuncsArg *atans, LookupArg *lookup)
 {
 
-	Point &pbasei = base->ring.ring[basei], &pbasej = base->ring.ring[(basei + basecut) % base->ring.n];
-	double basedx = pbasej.x - pbasei.x, basedy = pbasej.y - pbasei.y;
-	double baselength = sqrt(basedx * basedx + basedy * basedy);
+	double baselength = sqrts[basei][(basei + basecut) % base->ring.n];
 
 	if (baselength >= 1e-13)
 	{
+		Point &pbasei = base->ring.ring[basei], &pbasej = base->ring.ring[(basei + basecut) % base->ring.n];
+		double basedx = pbasej.x - pbasei.x, basedy = pbasej.y - pbasei.y;
 		double basedxn = basedx / baselength, basedyn = basedy / baselength;
-		for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
+		for (int basepeak = basei + 1; basepeak < basei + basecut; basepeak++)
 		{
-			Point &pbasepeek = base->ring.ring[basepeek % base->ring.n];
-			double basep11yp21yleft = pbasei.y - pbasepeek.y, basep21xp11xleft = pbasepeek.x - pbasei.x;
+			Point &pbasepeak = base->ring.ring[basepeak % base->ring.n];
+			double basep11yp21yleft = pbasei.y - pbasepeak.y, basep21xp11xleft = pbasepeak.x - pbasei.x;
 			double baseleft = (basep21xp11xleft * basedxn - basep11yp21yleft * basedyn);
-			double basep11yp21yright = pbasej.y - pbasepeek.y, basep21xp11xright = pbasepeek.x - pbasej.x;
+			double basep11yp21yright = pbasej.y - pbasepeak.y, basep21xp11xright = pbasepeak.x - pbasej.x;
 			double baseright = (basep21xp11xright * basedxn - basep11yp21yright * basedyn);
 			double baseh = -(basep11yp21yleft * basedxn + basep21xp11xleft * basedyn);
 			double basehabs = abs(baseh);
@@ -799,47 +835,45 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 			{
 				for (int matchi = 0; matchi < match->ring.n; matchi++)
 				{
-					Lookup &lookupl = lookup[basei][(basei + basecut) % base->ring.n][matchi];
-					if (lookupl.begin > matchi + matchcut || lookupl.end < matchi + matchcut) continue;
-					Lookup &lookupleft = lookup[basei][basepeek % base->ring.n][matchi];
-
-					Point &pmatchi = match->ring.ring[matchi], &pmatchj = match->ring.ring[(matchi + matchcut) % match->ring.n];
-					double matchdx = pmatchj.x - pmatchi.x, matchdy = pmatchj.y - pmatchi.y;
-					double matchlength = sqrt(matchdx * matchdx + matchdy * matchdy);
+					double matchlength = sqrts[match->ring.n - matchi - 1][match->ring.n - ((matchi + matchcut) % match->ring.n) - 1];
 					if (matchlength >= 1e-13)
 					{
+						Lookup &lookupl = lookup[basei][(basei + basecut) % base->ring.n][matchi];
+						if (lookupl.begin > matchi + matchcut || lookupl.end < matchi + matchcut) continue;
+						Lookup &lookupleft = lookup[basei][basepeak % base->ring.n][matchi];
+
+						Point &pmatchi = match->ring.ring[matchi], &pmatchj = match->ring.ring[(matchi + matchcut) % match->ring.n];
+						double matchdx = pmatchj.x - pmatchi.x, matchdy = pmatchj.y - pmatchi.y;
 						double matchdxn = matchdx / matchlength, matchdyn = matchdy / matchlength;
 
 						Matching &gate = lookupl.matching[matchi + matchcut - lookupl.begin];
 
-						int matchpeekend = std::min(lookupleft.end, matchi + matchcut - 1);
-						for (int matchpeek = lookupleft.begin; matchpeek <= matchpeekend; matchpeek++)
+						int matchpeakend = std::min(lookupleft.end, matchi + matchcut - 1);
+						for (int matchpeak = lookupleft.begin; matchpeak <= matchpeakend; matchpeak++)
 						{
-							Lookup &lookupright = lookup[basepeek % base->ring.n][(basei + basecut) % base->ring.n][matchpeek % match->ring.n];
-							int matchindexright = matchpeek >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
+							Lookup &lookupright = lookup[basepeak % base->ring.n][(basei + basecut) % base->ring.n][matchpeak % match->ring.n];
+							int matchindexright = matchpeak >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
 							if (matchindexright < lookupright.begin || matchindexright > lookupright.end) continue;
 
 							Matching &right = lookupright.matching[matchindexright - lookupright.begin];
-							Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
+							Matching &left = lookupleft.matching[matchpeak - lookupleft.begin];
 
-							if (basepeek % base->ring.n == base->ring.n - (matchpeek % match->ring.n) - 1)
+							if (basepeak % base->ring.n == base->ring.n - (matchpeak % match->ring.n) - 1)
 							{
 								{
 									Matching *rightedge = CoWorkerleftedge(&right);
 									if (rightedge == nullptr)
 									{
-										Point &basewing = pbasej, &matchwing = pmatchj;
-										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
-										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+										double atan2basewing = atans[basepeak % base->ring.n][(basei + basecut) % base->ring.n];
+										double atan2matchwing = atans[basepeak % base->ring.n][match->ring.n - ((matchi + matchcut) % match->ring.n) - 1];
 										double delta = abs(atan2basewing - atan2matchwing);
 										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 											continue;
 									}
 									else
 									{
-										Point &basewing = base->ring.ring[rightedge->base1], &matchwing = match->ring.ring[rightedge->match1];
-										double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
-										double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+										double atan2basewing = atans[basepeak % base->ring.n][rightedge->base1];
+										double atan2matchwing = atans[basepeak % base->ring.n][rightedge->match1];
 										double delta = abs(atan2basewing - atan2matchwing);
 										if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 											continue;
@@ -847,19 +881,18 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 								}
 								{
 									Matching *leftedge = CoWorkerrightedge(&left);
-									Point &basewing = base->ring.ring[leftedge->base1], &matchwing = match->ring.ring[leftedge->match1];
-									double atan2basewing = atan2(basewing.x - pbasepeek.x, basewing.y - pbasepeek.y);
-									double atan2matchwing = atan2(matchwing.x - pbasepeek.x, matchwing.y - pbasepeek.y);
+									double atan2basewing = atans[basepeak % base->ring.n][leftedge->base1];
+									double atan2matchwing = atans[basepeak % base->ring.n][leftedge->match1];
 									double delta = abs(atan2basewing - atan2matchwing);
 									if (delta < MINANGLE || delta > H_2_PI - MINANGLE) 
 										continue;
 								}
 							}
 
-							Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
-							double matchp11yp21yleft = pmatchi.y - pmatchpeek.y, matchp21xp11xleft = pmatchpeek.x - pmatchi.x;
+							Point &pmatchpeak = match->ring.ring[matchpeak % match->ring.n];
+							double matchp11yp21yleft = pmatchi.y - pmatchpeak.y, matchp21xp11xleft = pmatchpeak.x - pmatchi.x;
 							double matchleft = (matchp21xp11xleft * matchdxn - matchp11yp21yleft * matchdyn);
-							double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
+							double matchp11yp21yright = pmatchj.y - pmatchpeak.y, matchp21xp11xright = pmatchpeak.x - pmatchj.x;
 							double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
 
 							double rightmax, rightmin;
@@ -934,7 +967,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 							{
 								break;
 							}
-						}//matchpeek
+						}//matchpeak
 
 					}
 
@@ -956,7 +989,7 @@ void CoWorker::matchinvslot(/**/int basei, int basecut, SRing2 *base, SRing2 *ma
 			{
 				break;
 			}
-		}//basepeek
+		}//basepeak
 
 	}
 
@@ -972,16 +1005,16 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 	double basedx = pbasej.x - pbasei.x, basedy = pbasej.y - pbasei.y;
 	double basesq = basedx * basedx + basedy * basedy;
 
-	for (int basepeek = basei + 1; basepeek < basei + basecut; basepeek++)
+	for (int basepeak = basei + 1; basepeak < basei + basecut; basepeak++)
 	{
-		Point &pbasepeek = base->ring.ring[basepeek];
-		double baseleftdx = pbasepeek.x - pbasei.x, baseleftdy = pbasepeek.y - pbasei.y;
+		Point &pbasepeak = base->ring.ring[basepeak];
+		double baseleftdx = pbasepeak.x - pbasei.x, baseleftdy = pbasepeak.y - pbasei.y;
 		double baseleftsq = baseleftdx * baseleftdx + baseleftdy * baseleftdy;
-		double baserightdx = pbasej.x - pbasepeek.x, baserightdy = pbasej.y - pbasepeek.y;
+		double baserightdx = pbasej.x - pbasepeak.x, baserightdy = pbasej.y - pbasepeak.y;
 		double baserightsq = baserightdx * baserightdx + baserightdy * baserightdy;
 
 
-		double &basep1x = pbasei.x, &basep1y = pbasei.y, &basep2x = pbasepeek.x, &basep2y = pbasepeek.y, &basep3x = pbasej.x, &basep3y = pbasej.y;
+		double &basep1x = pbasei.x, &basep1y = pbasei.y, &basep2x = pbasepeak.x, &basep2y = pbasepeak.y, &basep3x = pbasej.x, &basep3y = pbasej.y;
 		double basep1yp2y = basep1y - basep2y, basep1xp3x = basep1x - basep3x, basep1yp3y = basep1y - basep3y, basep2xp1x = basep2x - basep1x;
 		double baseareal = basep1yp2y * basep1xp3x + basep1yp3y * basep2xp1x;
 		bool basesign = signbit(baseareal);
@@ -993,7 +1026,7 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 			{
 				Lookup &lookupl = lookup[basei][basecut - 1][matchi];
 				if (lookupl.begin > matchi + matchcut || lookupl.end < matchi + matchcut) continue;
-				Lookup &lookupleft = lookup[basei][basepeek - basei - 1][matchi];
+				Lookup &lookupleft = lookup[basei][basepeak - basei - 1][matchi];
 
 				Point &pmatchi = match->ring.ring[matchi], &pmatchj = match->ring.ring[(matchi + matchcut) % match->ring.n];
 				double matchdx = pmatchj.x - pmatchi.x, matchdy = pmatchj.y - pmatchi.y;
@@ -1001,28 +1034,28 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 
 				Matching &gate = lookupl.matching[matchi + matchcut - lookupl.begin];
 
-				int matchpeekend = std::min(lookupleft.end, matchi + matchcut - 1);
-				for (int matchpeek = lookupleft.begin; matchpeek <= matchpeekend; matchpeek++)
+				int matchpeakend = std::min(lookupleft.end, matchi + matchcut - 1);
+				for (int matchpeak = lookupleft.begin; matchpeak <= matchpeakend; matchpeak++)
 				{
-					Lookup &lookupright = lookup[basepeek][basei + basecut - basepeek - 1][matchpeek % match->ring.n];
-					int matchindexright = matchpeek >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
+					Lookup &lookupright = lookup[basepeak][basei + basecut - basepeak - 1][matchpeak % match->ring.n];
+					int matchindexright = matchpeak >= match->ring.n ? matchi + matchcut - match->ring.n : matchi + matchcut;
 					if (matchindexright < lookupright.begin || matchindexright > lookupright.end) continue;
 
-					Point &pmatchpeek = match->ring.ring[matchpeek % match->ring.n];
+					Point &pmatchpeak = match->ring.ring[matchpeak % match->ring.n];
 
-					double &matchp1x = pmatchi.x, &matchp1y = pmatchi.y, &matchp2x = pmatchpeek.x, &matchp2y = pmatchpeek.y, &matchp3x = pmatchj.x, &matchp3y = pmatchj.y;
+					double &matchp1x = pmatchi.x, &matchp1y = pmatchi.y, &matchp2x = pmatchpeak.x, &matchp2y = pmatchpeak.y, &matchp3x = pmatchj.x, &matchp3y = pmatchj.y;
 					double matchp1yp2y = matchp1y - matchp2y, matchp1xp3x = matchp1x - matchp3x, matchp1yp3y = matchp1y - matchp3y, matchp2xp1x = matchp2x - matchp1x;
 					double matchareal = matchp1yp2y * matchp1xp3x + matchp1yp3y * matchp2xp1x;
 					bool matchsign = signbit(matchareal);
 
 
 					Matching &right = lookupright.matching[matchindexright - lookupright.begin];
-					Matching &left = lookupleft.matching[matchpeek - lookupleft.begin];
+					Matching &left = lookupleft.matching[matchpeak - lookupleft.begin];
 
-					double matchleftdx = pmatchpeek.x - pmatchi.x, matchleftdy = pmatchpeek.y - pmatchi.y;
+					double matchleftdx = pmatchpeak.x - pmatchi.x, matchleftdy = pmatchpeak.y - pmatchi.y;
 					double matchleftsq = matchleftdx * matchleftdx + matchleftdy * matchleftdy;
 
-					double matchrightdx = pmatchj.x - pmatchpeek.x, matchrightdy = pmatchj.y - pmatchpeek.y;
+					double matchrightdx = pmatchj.x - pmatchpeak.x, matchrightdy = pmatchj.y - pmatchpeak.y;
 					double matchrightsq = matchrightdx * matchrightdx + matchrightdy * matchrightdy;
 
 					double quality;
@@ -1047,7 +1080,7 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 						gate.rightback = &right;
 					}
 
-				}//matchpeek
+				}//matchpeak
 
 				if (*aborted)
 				{
@@ -1066,7 +1099,7 @@ void CoWorker::matchinvslot(int basei, int basecut, SRing2 *base, SRing2 *match,
 		{
 			break;
 		}
-	}//basepeek
+	}//basepeak
 
 	semaphore->release();
 }

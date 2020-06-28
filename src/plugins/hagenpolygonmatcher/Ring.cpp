@@ -5,6 +5,25 @@
 double H_PI = acos(-1);
 double H_2_PI = 2. * H_PI;
 
+inline Funcs createFuncs(int n)
+{
+	Funcs funcs = new FuncsArg[n];
+	for (int i = 0; i < n; i++)
+	{
+		funcs[i] = new double[n];
+	}
+	return funcs;
+}
+
+inline void deleteFuncs(Funcs funcs, int n)
+{
+	for (int i = 0; i < n; i++)
+	{
+		delete[] funcs[i];
+	}
+	delete[] funcs;
+}
+
 inline Point operator*(const double &d, const Point &p)
 {
 	return{ d * p.x, d * p.y };
