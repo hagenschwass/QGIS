@@ -122,6 +122,17 @@ inline void swapSRingsInv(SRing &ring, SRing &inv)
 	}
 }
 
+inline bool isSRingsequalInv(SRing &ring, SRing &inv, double eps)
+{
+	for (int i = 0; i < ring.n; i++)
+	{
+		Point &p = ring.ring[i], &q = inv.ring[inv.n - i - 1];
+		double dx = p.x - q.x, dy = p.y - q.y;
+		if (dx * dx + dy * dy > eps * eps) return false;
+	}
+	return true;
+}
+
 inline void meanSRings(SRing &r1, SRing &r2)
 {
 	for (int i = 0; i < r1.n; i++)
@@ -175,6 +186,11 @@ inline SRing2 invertedSRing2(SRing2 &ring2)
 	}
 	result.area = -ring2.area;
 	return result;
+}
+
+inline bool isSRing2sequalInv(SRing2 &ring, SRing2 &inv, double eps)
+{
+	return isSRingsequalInv(ring.ring, inv.ring, eps);
 }
 
 inline void swapSRing2sInv(SRing2 &ring, SRing2 &inv)

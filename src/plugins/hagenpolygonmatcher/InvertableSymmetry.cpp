@@ -164,7 +164,7 @@ inline PointMatch *computeBestSymmetryInv(SRing2 &base, SymmetryMatches &matches
 		for (BaseMatch *bm = matches.base[i].next; bm != &matches.base[i]; bm = bm->next)
 		{
 			PointMatch *pm = reinterpret_cast<PointMatch*>(bm);
-			int match = pm->match, matchinv = base.ring.n - match - 1;
+			int match = pm->match > i ? pm->match - base.ring.n : pm->match;
 
 			double qualityl = pm->quality + (pm->gate == nullptr ? quality : pm->gate->quality);
 

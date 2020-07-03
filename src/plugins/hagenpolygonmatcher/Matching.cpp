@@ -372,9 +372,10 @@ inline FreeMatchingTree freeMatchingTree(Matching *up, Matching *down)
 	return result;
 }
 
-inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, int basej, int matchj)
+inline bool adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, int basej, int matchj)
 {
-	if (fm->right == nullptr) return;
+	if (fm->right == nullptr) return true;
+	bool iseq = true;
 	Transform tbaseleft;
 	Transform tbaseright;
 	Transform tmatchleft;
@@ -403,6 +404,13 @@ inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, in
 		double matchp11yp21yright = pmatchj.y - pmatchpeek.y, matchp21xp11xright = pmatchpeek.x - pmatchj.x;
 		double matchright = (matchp21xp11xright * matchdxn - matchp11yp21yright * matchdyn);
 		double matchh = (matchp11yp21yleft * matchdxn + matchp21xp11xleft * matchdyn);
+
+		double adh = abs(matchh - baseh);
+		iseq &= adh < 1e-7;
+		double adl = abs(matchleft - baseleft);
+		iseq &= adl < 1e-7;
+		double adr = abs(matchright - baseright);
+		iseq &= adr < 1e-7;
 
 		double leftnew = .5 * (matchleft + baseleft);
 		double rightnew = .5 * (matchright + baseright);
@@ -453,14 +461,16 @@ inline void adjustFreeMatching(SRing2 &base, SRing2 &match, FreeMatching *fm, in
 		match.ring.ring[i % match.ring.n] = tmatchright * match.ring.ring[i % match.ring.n];
 	}
 
-	adjustFreeMatching(base, match, fm->left, fm->right->base, fm->right->match);
-	adjustFreeMatching(base, match, fm->right, basej, matchj);
+	bool lefteq = adjustFreeMatching(base, match, fm->left, fm->right->base, fm->right->match);
+	bool righteq = adjustFreeMatching(base, match, fm->right, basej, matchj);
+
+	return iseq && lefteq && righteq;
 }
 
 inline void adjustFreeMatchingTree(SRing2 &base, SRing2 &match, FreeMatchingTree &tree)
 {
 	FreeMatching *up = tree.up, *down = tree.down;
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 15; i++)
 	{
 		adjustFreeMatching(base, match, up, down->base, down->match);
 		adjustFreeMatching(base, match, down, up->base, up->match);
